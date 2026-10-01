@@ -220,7 +220,7 @@ export async function buyPack(creator, pack, region, method) {
   return pay
 }
 
-export function placeOrder({ creatorId, typeId, addons, title, brief, footage }) {
+export function placeOrder({ creatorId, typeId, addons, title, brief, footage, checklist }) {
   const c = state.creators.find((x) => x.id === creatorId)
   if (!isVerified(c)) throw new Error('Complete KYC before placing an order.')
   const q = quote(typeId, addons)
@@ -235,6 +235,7 @@ export function placeOrder({ creatorId, typeId, addons, title, brief, footage })
       addons,
       title: title || editType(typeId).name,
       brief,
+      checklist: checklist || null,
       footage: footage || 'raw_footage.mp4',
       status: 'paid',
       credits: q.credits,
@@ -276,6 +277,19 @@ export const requestDeletion = (creatorId) =>
   set((d) => {
     if (!d.deletions.some((x) => x.userId === creatorId && x.status === 'requested'))
       d.deletions.unshift({ id: nextId('D'), role: 'creator', userId: creatorId, status: 'requested', at: now() })
+  })
+
+// ── Shared: order messages + editor checklist ─────────────────────────────
+export const sendMessage = (orderId, from, text) =>
+  set((d) => {
+    const o = d.orders.find((x) => x.id === orderId)
+    o.messages = [...(o.messages || []), { from, text: String(text).slice(0, 1000), at: now() }]
+  })
+
+export const toggleStep = (orderId, key) =>
+  set((d) => {
+    const o = d.orders.find((x) => x.id === orderId)
+    o.done = { ...(o.done || {}), [key]: !(o.done || {})[key] }
   })
 
 // ── Editor actions ──────────────────────────────────────────────────────────
