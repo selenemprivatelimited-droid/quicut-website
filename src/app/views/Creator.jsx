@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import {
   EDIT_TYPES,
   ADDONS,
@@ -13,7 +13,9 @@ import {
   addon,
 } from '../config/pricing.js'
 import { creditBalance, buyPack, placeOrder, approveDelivery, askRevision, requestDeletion, isVerified } from '../services/store.js'
-import { BRIEF_RULES } from '../../content.js'
+import { aiBrief } from '../services/ai.js'
+import { AiCard, VoiceButton } from './Copilot.jsx'
+import OrderThread from './OrderThread.jsx'
 import { KycBanner } from './Kyc.jsx'
 import { Tabs, Credits, Coin, Pill, Empty, Sheet, Timeline, Stars, toast, qc, ago, dueIn } from '../ui.jsx'
 
@@ -110,11 +112,6 @@ export function OrderRow({ o, onClick, right, sub }) {
   )
 }
 
-function readBrief(text) {
-  const t = text.toLowerCase()
-  return BRIEF_RULES.filter((r) => r.words.some((w) => t.includes(w))).map((r) => r.tag)
-}
-
 function NewEdit({ me, balance, go }) {
   const [typeId, setTypeId] = useState('vlog')
   const [adds, setAdds] = useState([])
@@ -123,15 +120,29 @@ function NewEdit({ me, balance, go }) {
   const [file, setFile] = useState(null)
   const q = quote(typeId, adds)
   const short = q.credits - balance
-  const tags = useMemo(() => readBrief(brief), [brief])
+  const [ai, setAi] = useState(null)
+  const [aiBusy, setAiBusy] = useState(false)
   const ok = isVerified(me)
+
+  const readWithAi = async () => {
+    setAiBusy(true)
+    const r = await aiBrief(brief)
+    setAi(r)
+    setAiBusy(false)
+  }
+  const applyAi = () => {
+    setTypeId(ai.suggestedType)
+    setAdds((a) => [...new Set([...a, ...ai.suggestedAddons])])
+    toast('AI suggestion applied')
+  }
+  const aiDiffers = ai && (ai.suggestedType !== typeId || ai.suggestedAddons.some((x) => !adds.includes(x)))
 
   const toggle = (id) => setAdds((a) => (a.includes(id) ? a.filter((x) => x !== id) : [...a, id]))
 
   const submit = (e) => {
     e.preventDefault()
     try {
-      const id = placeOrder({ creatorId: me.id, typeId, addons: adds, title: title.trim(), brief, footage: file?.name })
+      const id = placeOrder({ creatorId: me.id, typeId, addons: adds, title: title.trim(), brief, footage: file?.name, checklist: ai?.checklist?.length ? ai : null })
       toast(`${id} placed. ${qc(q.credits)} credits used.`)
       go('orders')
     } catch (err) {
@@ -190,17 +201,49 @@ function NewEdit({ me, balance, go }) {
             onChange={(e) => setBrief(e.target.value)}
             placeholder="Telugu lo edit cheyyandi. Warm colour grade, Telugu background music, forest part lo slow motion…"
           />
-          {tags.length > 0 && (
-            <div className="ai-brief">
-              <span className="ai-tag">✦ AI extracted brief</span>
-              <div className="chips-row">
-                {tags.map((t) => (
-                  <span key={t} className="tag">
-                    {t}
-                  </span>
-                ))}
+          <div className="ai-row">
+            <VoiceButton onText={(t) => setBrief((b) => (b ? b + ' ' : '') + t)} />
+            <button type="button" className="btn btn-ai btn-sm" onClick={readWithAi} disabled={aiBusy || brief.trim().length < 8}>
+              {aiBusy ? 'Reading your brief…' : '✦ Read my brief with AI'}
+            </button>
+            <span className="muted small">Turns your brief into a checklist for your editor and suggests the right edit.</span>
+          </div>
+          {ai && (
+            <AiCard title="AI brief" source={ai.source} onClose={() => setAi(null)}>
+              {ai.language && <p className="mono small muted">Language: {ai.language}</p>}
+              {ai.summary && <p>{ai.summary}</p>}
+              {ai.checklist.length > 0 && (
+                <ul className="ai-check">
+                  {ai.checklist.map((c, i) => (
+                    <li key={i}>
+                      <b>{c.item}</b>
+                      {c.detail && c.detail !== c.item ? <span className="muted"> · {c.detail}</span> : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {ai.questions.length > 0 && (
+                <div className="ai-questions">
+                  <span className="label">Your editor may ask</span>
+                  {ai.questions.map((q, i) => (
+                    <p key={i} className="small">? {q}</p>
+                  ))}
+                </div>
+              )}
+              <div className="ai-suggest">
+                <span className="small">
+                  Suggested: <b>{editType(ai.suggestedType).name}</b>
+                  {ai.suggestedAddons.length ? ' + ' + ai.suggestedAddons.map((a) => addon(a).name).join(', ') : ''}
+                </span>
+                {aiDiffers ? (
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={applyAi}>
+                    Use this
+                  </button>
+                ) : (
+                  <span className="pill pill-green">Matches your pick</span>
+                )}
               </div>
-            </div>
+            </AiCard>
           )}
         </div>
       </div>
@@ -286,6 +329,16 @@ function OrderSheet({ s, o, onClose }) {
           </>
         )}
       </dl>
+      {o.checklist?.checklist?.length > 0 && (
+        <div className="ai-mini">
+          <span className="ai-tag">✦ Your AI brief</span>
+          <span className="small muted">
+            {o.checklist.checklist.length} items sent to your editor
+            {o.done ? ` · ${Object.values(o.done).filter(Boolean).length} done` : ''}
+          </span>
+        </div>
+      )}
+      <OrderThread s={s} o={o} as="creator" />
       {o.status === 'review' && (
         <div className="stack">
           <a className="btn btn-ghost" href={o.deliveryUrl} target="_blank" rel="noreferrer">
