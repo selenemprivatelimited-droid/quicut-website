@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import Logo from '../Logo.jsx'
 import { Icon } from '../app/ui.jsx'
-import { consumeLinkHash, getSession, rest, sendSignIn, signOut, verifyCode } from '../app/services/supa.js'
+import { consumeLinkHash, getSession, rest, signOut } from '../app/services/supa.js'
+import { EmailSignIn } from '../app/views/Account.jsx'
 
 // The admin panel is only for QuiCut's admins (1 to 10 people).
 // Admins sign in with a link or 6-digit code sent to their email (Supabase Auth). The panel opens only
@@ -19,10 +20,6 @@ async function checkAdmin() {
 export default function Gate({ children }) {
   const dev = typeof location !== 'undefined' && DEV_HOSTS.includes(location.hostname)
   const [st, setSt] = useState({ loading: true })
-  const [email, setEmail] = useState('')
-  const [code, setCode] = useState('')
-  const [sent, setSent] = useState(false)
-  const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
 
   const refresh = async () => {
@@ -47,31 +44,6 @@ export default function Gate({ children }) {
   const logout = async () => {
     await signOut()
     location.reload()
-  }
-
-  const send = async (e) => {
-    e.preventDefault()
-    setErr('')
-    setBusy(true)
-    try {
-      await sendSignIn(email, location.origin + location.pathname)
-      setSent(true)
-    } catch (e2) {
-      setErr(e2.message)
-    }
-    setBusy(false)
-  }
-  const verify = async (e) => {
-    e.preventDefault()
-    setErr('')
-    setBusy(true)
-    try {
-      await verifyCode(email, code)
-      await refresh()
-    } catch (e2) {
-      setErr(e2.message)
-    }
-    setBusy(false)
   }
 
   if (st.ok) return children({ ...st, signOut: logout })
@@ -104,27 +76,7 @@ export default function Gate({ children }) {
           <>
             <h1>Admins only</h1>
             <p className="muted">QuiCut's private admin panel. Sign in with your admin email and we'll send you a link.</p>
-            {!sent ? (
-              <form className="gate-form" onSubmit={send}>
-                <input type="email" required autoComplete="email" placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Admin email" />
-                <button className="btn btn-red btn-block" disabled={busy}>
-                  {busy ? 'Sending…' : 'Email me a sign-in link'}
-                </button>
-              </form>
-            ) : (
-              <form className="gate-form" onSubmit={verify}>
-                <p className="small">
-                  Sent to <b>{email}</b>. Open the link on this device, or type the 6-digit code if your email has one.
-                </p>
-                <input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} placeholder="123456" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} aria-label="Sign-in code" />
-                <button className="btn btn-red btn-block" disabled={busy || code.length !== 6}>
-                  {busy ? 'Checking…' : 'Sign in'}
-                </button>
-                <button type="button" className="link-btn small" onClick={() => setSent(false)}>
-                  Use a different email
-                </button>
-              </form>
-            )}
+            <EmailSignIn redirectTo={location.origin + location.pathname} onSignedIn={refresh} />
           </>
         )}
         {err && <p className="bad small">{err}</p>}
