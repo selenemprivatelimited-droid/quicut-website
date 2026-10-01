@@ -183,7 +183,7 @@ export function chatContext(role, s, ids) {
       orders: s.orders.filter((o) => o.creatorId === me.id).map((o) => ({ id: o.id, title: o.title, type: editType(o.typeId).name, status: o.status, credits: o.credits, dueAt: o.dueAt })),
       editTypes: CATALOG.types,
       addons: CATALOG.addons,
-      packs: CREDIT_PACKS.map((p) => ({ id: p.id, priceInr: p.priceInr, priceUsd: p.priceUsd, credits: packTotal(p) })),
+      packs: CREDIT_PACKS.map((p) => ({ name: p.name, priceInr: p.priceInr, priceUsd: p.priceUsd, credits: packTotal(p), monthly: p.period === 'month', fits: p.fits })),
     }
   }
   if (role === 'editor') {
