@@ -429,6 +429,7 @@ function Wallet({ s, me, balance }) {
         </div>
       </div>
       {PACKS_ARE_PLACEHOLDER && <p className="muted small">Sample packs. Final packs and prices coming soon.</p>}
+      <p className="muted small">QuiCut Pro renews every month. In demo mode it is charged once.</p>
       <div className="pack-grid">
         {CREDIT_PACKS.map((p) => (
           <div key={p.id} className="pack">
@@ -436,7 +437,9 @@ function Wallet({ s, me, balance }) {
             <div className="pack-credits">
               <Coin size={26} /> {qc(packTotal(p))}
             </div>
+            <div className="pack-name">{p.name}</div>
             <div className="pack-bonus">{p.bonus ? `${qc(p.credits)} + ${qc(p.bonus)} bonus` : 'No bonus'}</div>
+            {p.fits && <div className="pack-fits">{p.fits}</div>}
             <button className="btn btn-red btn-block" disabled={!ok} onClick={() => setPick(p)}>
               {packPrice(p, region)}
             </button>
