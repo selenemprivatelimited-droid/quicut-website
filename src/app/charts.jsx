@@ -218,7 +218,7 @@ export function Kpi({ label, value, delta, spark, color, hint, goodWhenUp = true
             {up ? '▲' : '▼'} {Math.abs(Math.round(delta * 100))}%<span className="sr-only"> vs previous period</span>
           </span>
         ) : (
-          <span className="delta flat">{hint || (delta == null ? 'new, no earlier data' : 'no change')}</span>
+          <span className="delta flat">{hint || (delta == null ? 'no history yet' : 'no change')}</span>
         )}
         {spark && <Spark values={spark} color={color} />}
       </div>

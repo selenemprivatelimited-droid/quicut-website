@@ -1029,3 +1029,78 @@
     overflow-x: clip;
   }
 }
+
+/* ================= Accounts (live mode) ================= */
+.role-pick {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.role-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  text-align: left;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--base);
+  color: var(--t1);
+  font: inherit;
+  cursor: pointer;
+  min-height: 96px;
+}
+.role-card .ico {
+  color: var(--t2);
+}
+.role-card.is-on {
+  border-color: var(--red);
+  background: var(--red-dim);
+}
+.role-card.is-on .ico {
+  color: var(--red);
+}
+.account-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--s1);
+  min-width: 0;
+}
+.account-name {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  min-width: 0;
+}
+.account-name b {
+  font-size: 0.85rem;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-name .small {
+  font-size: 0.7rem;
+}
+.signin-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.center {
+  text-align: center;
+}
+@media (max-width: 760px) {
+  .signin-btn {
+    min-height: 40px;
+    padding: 0 12px;
+  }
+  .topbar .who select {
+    max-width: 120px;
+  }
+}

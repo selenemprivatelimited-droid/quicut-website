@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Logo from '../Logo.jsx'
-import { useStore, resetDemo, alerts } from '../app/services/store.js'
+import { useStore, resetDemo, alerts, enterAdminLive } from '../app/services/store.js'
 import { MODE } from '../app/services/payments.js'
 import { KYC_MODE } from '../app/services/kyc.js'
 import { Toaster, toast, Icon } from '../app/ui.jsx'
@@ -48,6 +48,11 @@ function Shell({ who }) {
   const s = useStore()
   const [sec, setSecState] = useState(initialSection)
   const [days, setDays] = useState(30)
+  const [loadErr, setLoadErr] = useState('')
+  useEffect(() => {
+    if (who.live) enterAdminLive().catch((e) => setLoadErr(e.message))
+  }, [who.live])
+  const live = !!s.live
   const setSec = (id) => {
     setSecState(id)
     history.replaceState(null, '', '#' + id)
@@ -82,18 +87,19 @@ function Shell({ who }) {
             <span className="small">{who.email}</span>
           </div>
           <div className="mode-tags">
+            <span className={'pill ' + (live ? 'pill-green' : 'pill-muted')}>Data: {live ? 'live' : 'demo'}</span>
             <span className="pill pill-muted">Payments: {MODE}</span>
-            <span className="pill pill-muted">KYC: {KYC_MODE}</span>
+            <span className="pill pill-muted">KYC: {live ? 'manual review' : KYC_MODE}</span>
           </div>
           <div className="btn-row">
             <button
               className="link-btn small"
               onClick={() => {
                 resetDemo()
-                toast('Demo data reset')
+                toast(live ? 'Refreshed' : 'Demo data reset')
               }}
             >
-              Reset demo data
+              {live ? 'Refresh data' : 'Reset demo data'}
             </button>
             {who.live && (
               <button className="link-btn small" onClick={who.signOut}>
@@ -118,15 +124,21 @@ function Shell({ who }) {
             )}
           </div>
         </header>
-        {sec === 'overview' && <Overview s={s} days={days} go={setSec} />}
-        {sec === 'analyst' && <Analyst s={s} />}
-        {sec === 'team' && <Team s={s} days={days} />}
-        {sec === 'monitor' && <Monitor live={who.live} />}
-        {sec === 'orders' && <Orders s={s} />}
-        {sec === 'kyc' && <Kyc s={s} queue={kycQueue} />}
-        {sec === 'payouts' && <Payouts s={s} />}
-        {sec === 'people' && <People s={s} />}
-        {sec === 'pricing' && <Pricing />}
+        {loadErr && <p className="bad small">Could not load live data: {loadErr}</p>}
+        {who.live && !live && !loadErr && <p className="muted">Loading live data…</p>}
+        {(!who.live || live) && (
+          <>
+            {sec === 'overview' && <Overview s={s} days={days} go={setSec} />}
+            {sec === 'analyst' && <Analyst s={s} />}
+            {sec === 'team' && <Team s={s} days={days} />}
+            {sec === 'monitor' && <Monitor live={who.live} />}
+            {sec === 'orders' && <Orders s={s} />}
+            {sec === 'kyc' && <Kyc s={s} queue={kycQueue} />}
+            {sec === 'payouts' && <Payouts s={s} />}
+            {sec === 'people' && <People s={s} />}
+            {sec === 'pricing' && <Pricing />}
+          </>
+        )}
       </main>
       <Copilot role="admin" s={s} ids={{}} />
       <Toaster />

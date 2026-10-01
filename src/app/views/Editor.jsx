@@ -6,7 +6,7 @@ import { AiCard } from './Copilot.jsx'
 import OrderThread from './OrderThread.jsx'
 import { KycBanner } from './Kyc.jsx'
 import { OrderRow } from './Creator.jsx'
-import { Tabs, Pill, Empty, Sheet, Icon, toast, inr, ago, dueIn } from '../ui.jsx'
+import { Tabs, Pill, Empty, Sheet, Icon, toast, act, inr, ago, dueIn } from '../ui.jsx'
 import { editorMetrics } from '../services/metrics.js'
 import { TrendChart, Kpi, RangePicker, ChartCard, seriesTable, fmtNum, fmtPct, fmtInr, fmtInrShort } from '../charts.jsx'
 
@@ -175,14 +175,8 @@ function JobSheet({ s, o, me, onClose, mode }) {
         <button
           className="btn btn-green btn-block"
           disabled={!isVerified(me)}
-          onClick={() => {
-            try {
-              acceptJob(o.id, me.id)
-              toast(`${o.id} is yours. Deadline ${dueIn(o.dueAt).toLowerCase()}.`)
-              onClose()
-            } catch (e) {
-              toast(e.message, 'bad')
-            }
+          onClick={async () => {
+            if (await act(() => acceptJob(o.id, me.id).then(() => true), `${o.id} is yours. Deadline ${dueIn(o.dueAt).toLowerCase()}.`)) onClose()
           }}
         >
           Accept order · {inr(o.editorPayInr)}
@@ -197,10 +191,8 @@ function JobSheet({ s, o, me, onClose, mode }) {
           <button
             className="btn btn-red btn-block"
             disabled={!/^https?:\/\/\S+\.\S+/.test(url)}
-            onClick={() => {
-              deliverJob(o.id, url)
-              toast('Delivered. The creator has been notified.')
-              onClose()
+            onClick={async () => {
+              if (await act(() => deliverJob(o.id, url).then(() => true), 'Delivered. The creator has been notified.')) onClose()
             }}
           >
             Submit delivery
@@ -232,7 +224,7 @@ function Steps({ o, items, prefix, canTick }) {
             <li key={k} className={done[k] ? 'is-done' : ''}>
               {canTick ? (
                 <label>
-                  <input type="checkbox" checked={!!done[k]} onChange={() => toggleStep(o.id, k)} /> {it}
+                  <input type="checkbox" checked={!!done[k]} onChange={() => act(() => toggleStep(o.id, k))} /> {it}
                 </label>
               ) : (
                 it
@@ -308,14 +300,7 @@ function Earnings({ s, me, money }) {
         <button
           className="btn btn-green"
           disabled={money.available < PAYOUTS.minimumInr || !isVerified(me)}
-          onClick={() => {
-            try {
-              requestPayout(me.id)
-              toast('Payout requested')
-            } catch (e) {
-              toast(e.message, 'bad')
-            }
-          }}
+          onClick={() => act(() => requestPayout(me.id), 'Payout requested')}
         >
           Request payout
         </button>
