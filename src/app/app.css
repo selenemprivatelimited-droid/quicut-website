@@ -780,8 +780,11 @@ input[type='radio'] {
 }
 .pack-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(146px, 1fr));
   gap: 10px;
+}
+.pack .btn {
+  margin-top: auto;
 }
 .pack {
   position: relative;
@@ -811,10 +814,20 @@ input[type='radio'] {
   gap: 8px;
   font: 800 1.5rem var(--f-display);
 }
+.pack-name {
+  font: 700 0.85rem var(--f-body);
+  color: var(--t2);
+  margin-top: -4px;
+}
 .pack-bonus {
   font-size: 0.75rem;
   color: var(--amber);
   min-height: 1.1em;
+}
+.pack-fits {
+  font-size: 0.75rem;
+  color: var(--t2);
+  min-height: 2.4em;
 }
 .methods {
   border: 0;
