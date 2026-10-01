@@ -125,6 +125,17 @@ export function Empty({ title, children }) {
 
 let pushToast = () => {}
 export const toast = (msg, tone = 'ok') => pushToast({ msg, tone, id: Math.random() })
+
+/** Run an action (sync or async), toast the result or the error. Returns the result, or undefined on error. */
+export async function act(fn, ok) {
+  try {
+    const r = await fn()
+    if (ok) toast(typeof ok === 'function' ? ok(r) : ok)
+    return r
+  } catch (e) {
+    toast(e.message || 'Something went wrong', 'bad')
+  }
+}
 export function Toaster() {
   const [items, setItems] = useState([])
   useEffect(() => {
