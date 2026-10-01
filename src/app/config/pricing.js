@@ -7,14 +7,27 @@
 
 export const CREDIT = { name: 'QuiCut Credits', short: 'QC' }
 
-// PLACEHOLDER PACKS: replace with the founder's final packs.
+// Credit packs, built from the Final Pricing Model v2.0 edit prices and the QuiCut Pro plan
+// in the 7-month plan (Rs 1,599 a month for 4 edits with a priority queue).
 // priceInr is charged through Razorpay (India), priceUsd through Stripe (rest of world).
-export const PACKS_ARE_PLACEHOLDER = true
+// `fits` is shown on the pack so creators see what the credits buy.
+export const PACKS_ARE_PLACEHOLDER = false
 export const CREDIT_PACKS = [
-  { id: 'starter', priceInr: 299, priceUsd: 4.99, credits: 300, bonus: 0 },
-  { id: 'creator', priceInr: 999, priceUsd: 14.99, credits: 1000, bonus: 50, tag: 'Popular' },
-  { id: 'pro', priceInr: 2499, priceUsd: 34.99, credits: 2500, bonus: 250 },
-  { id: 'studio', priceInr: 4999, priceUsd: 64.99, credits: 5000, bonus: 750, tag: 'Best value' },
+  { id: 'reel', name: 'Single Reel', priceInr: 299, priceUsd: 3.99, credits: 299, bonus: 0, fits: '1 Reel / Short' },
+  { id: 'starter', name: 'Starter', priceInr: 999, priceUsd: 12.99, credits: 999, bonus: 50, fits: '2 Standard Vlogs' },
+  {
+    id: 'pro',
+    name: 'QuiCut Pro',
+    priceInr: 1599,
+    priceUsd: 19.99,
+    credits: 1599,
+    bonus: 397,
+    period: 'month',
+    tag: 'Pro · monthly',
+    fits: '4 Standard Vlogs a month + priority queue',
+  },
+  { id: 'creator', name: 'Creator', priceInr: 2499, priceUsd: 29.99, credits: 2499, bonus: 250, tag: 'Popular', fits: '5 Vlogs or 1 Wedding edit' },
+  { id: 'studio', name: 'Studio', priceInr: 4999, priceUsd: 59.99, credits: 4999, bonus: 750, tag: 'Best value', fits: '11 Vlogs or 7 Gaming montages' },
 ]
 
 // Where the creator pays from decides the gateway, currency and methods.
@@ -33,7 +46,7 @@ export const REGIONS = {
   },
 }
 export const packPrice = (p, region) =>
-  region === 'IN' ? '₹' + p.priceInr.toLocaleString('en-IN') : '$' + p.priceUsd.toFixed(2)
+  (region === 'IN' ? '₹' + p.priceInr.toLocaleString('en-IN') : '$' + p.priceUsd.toFixed(2)) + (p.period === 'month' ? '/mo' : '')
 export function guessRegion() {
   try {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''
