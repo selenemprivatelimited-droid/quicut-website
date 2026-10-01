@@ -1,10 +1,10 @@
 import { createRoot } from 'react-dom/client'
-import App from './App.jsx'
+import AdminApp from './AdminApp.jsx'
 import { initMonitor, ErrorBoundary } from '../monitor.jsx'
 
-initMonitor('app')
-createRoot(document.getElementById('app-root')).render(
+initMonitor('admin')
+createRoot(document.getElementById('admin-root')).render(
   <ErrorBoundary>
-    <App />
+    <AdminApp />
   </ErrorBoundary>
 )

@@ -1,6 +1,6 @@
 # QuiCut website + app
 
-The 3D marketing site and the web app (creator, editor and admin views) for **QuiCut**, India's video editing marketplace for creators.
+The 3D marketing site, the web app (creator and editor) and the private admin panel for **QuiCut**, India's video editing marketplace for creators.
 Built with [React Three Fiber](https://github.com/pmndrs/react-three-fiber) + three.js + Vite.
 
 ## What's on the page
@@ -33,16 +33,43 @@ time, so the same code also renders the MP4 versions of the intro frame by frame
 
 ## Web app (`/app.html`)
 
-Creator, editor and admin views with QuiCut Credits, per-video editor pay, KYC and payouts.
+Creator and editor app with QuiCut Credits, per-video editor pay, KYC and payouts. On phones it uses
+a native-style bottom tab bar (iOS safe areas, 44px touch targets) and can be added to the home screen.
+Dashboards: creators see credits spent per day and edits by type; editors see earnings, jobs and a
+7-day rating trend (7/14/30 day ranges). Charts are plain SVG in `src/app/charts.jsx`.
 Runs in demo mode (data in the browser). Prices and credit packs: `src/app/config/pricing.js`.
 Payments (Razorpay for India, Stripe with Apple Pay / Google Pay for global): `src/app/services/payments.js`.
 KYC: `src/app/services/kyc.js`.
 
-### QuiCut AI
+## Admin panel (`/admin/`, admins only)
+
+Not linked from the app. Admins sign in with an email link (Supabase Auth), and the panel opens only
+for emails in the `public.admins` table (add or remove admins there, 1 to 10 people).
+Sections: Overview (cash, GMV, revenue, orders, payouts per day), **Data Analyst** agent, Creators &
+editors, **Errors & speed**, Orders, KYC, Payouts, Accounts, Pricing. On `localhost` it opens with demo data.
+
+**Data Analyst** (`src/admin/Analyst.jsx`, `src/app/services/analyst.js`): ask in plain language; the
+agent plans a structured query (never code), runs it on the admin tables, retries once if the query is
+invalid, then charts and explains the result, with CSV export.
+
+**Errors & speed** (`src/monitor.jsx`, `src/admin/Monitor.jsx`): Sentry-style tracking on our own
+Supabase. Every page reports crashes, unhandled promise errors, `console.error`, failed or slow API
+calls, React render crashes (with a recovery screen) and Core Web Vitals (LCP, INP, CLS, FCP, TTFB)
+to `public.monitor_events`. Browsers can only insert; only admins can read. Issues are grouped by
+fingerprint; events older than 30 days are deleted nightly.
+
+## Data (Supabase, Mumbai)
+
+Tables: `profiles`, `orders`, `payments`, `credit_ledger`, `payouts`, `admins`, `monitor_events`, view
+`credit_balances`. Row-level security everywhere: people read only their own rows, admins read all.
+Money and credit changes are written only by the server (payment webhooks with the secret key).
+Footage goes to Cloudflare R2; KYC documents stay with the KYC provider.
+
+## QuiCut AI
 
 - **Creator:** AI brief agent (reads Telugu / Hindi / English briefs, writes the editor checklist, suggests tier and add-ons), voice input, and an assistant chat.
 - **Editor:** "Explain this job" plan with tick-off steps and progress, the creator's AI checklist, order messages with an AI reply drafter.
-- **Admin:** AI ops brief (follows the SOPs, items open the right tab) and "Ask your data".
+- **Admin:** AI ops brief (follows the SOPs, items open the right tab), "Ask your data" and the Data Analyst agent.
 - Every role has the floating **Ask QuiCut AI** assistant.
 
 The AI runs on a Cloudflare Worker with Workers AI (Llama 3.3 70B) at `https://api.quicutapp.com`
@@ -81,9 +108,12 @@ src/
   scene/geometry.js  Q / blade shapes, film-strip + glow textures
   Logo.jsx           QuiCut wordmark as inline SVG
   intro/             animated intro (canvas) shared by site and app
-  app/               web app: views, services (store, payments, KYC, AI), pricing config
+  app/               web app: views, services (store, payments, KYC, AI, metrics, Supabase), charts, pricing config
+  admin/             private admin panel: sign-in gate, dashboards, Data Analyst, Errors & speed
+  monitor.jsx        error tracking + Web Vitals reporter, used by every page
+admin/index.html     admin entry page (noindex)
 workers/ai/          Cloudflare Worker behind api.quicutapp.com (Workers AI)
-public/              favicon.svg
+public/              favicon.svg, manifest.webmanifest
 scripts/build-preview.mjs   no-install single-page preview build (bun + jsDelivr import map)
 ```
 

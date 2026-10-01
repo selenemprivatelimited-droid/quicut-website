@@ -49,7 +49,7 @@ export default function Copilot({ role, s, ids }) {
     <>
       <button className={'ai-fab' + (open ? ' is-open' : '')} onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls="ai-panel">
         <span className="ai-spark" aria-hidden="true">✦</span>
-        <span>{open ? 'Close' : 'Ask QuiCut AI'}</span>
+        <span className="ai-fab-lbl">{open ? 'Close' : 'Ask QuiCut AI'}</span>
       </button>
       {open && (
         <section id="ai-panel" className="ai-panel" role="dialog" aria-label="QuiCut AI assistant">
