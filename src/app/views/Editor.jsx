@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { EDIT_TYPES, ADDONS, PAYOUTS, editType, addon } from '../config/pricing.js'
 import { editorMoney, acceptJob, deliverJob, requestPayout, isVerified, toggleStep } from '../services/store.js'
 import { aiExplain } from '../services/ai.js'
@@ -6,10 +6,12 @@ import { AiCard } from './Copilot.jsx'
 import OrderThread from './OrderThread.jsx'
 import { KycBanner } from './Kyc.jsx'
 import { OrderRow } from './Creator.jsx'
-import { Tabs, Pill, Empty, Sheet, Stat, toast, inr, ago, dueIn } from '../ui.jsx'
+import { Tabs, Pill, Empty, Sheet, Icon, toast, inr, ago, dueIn } from '../ui.jsx'
+import { editorMetrics } from '../services/metrics.js'
+import { TrendChart, Kpi, RangePicker, ChartCard, seriesTable, fmtNum, fmtPct, fmtInr, fmtInrShort } from '../charts.jsx'
 
 export default function Editor({ s, editorId }) {
-  const [tab, setTab] = useState('jobs')
+  const [tab, setTab] = useState('dash')
   const me = s.editors.find((e) => e.id === editorId)
   const money = editorMoney(s, editorId)
   const open = s.orders.filter((o) => o.status === 'paid')
@@ -29,26 +31,74 @@ export default function Editor({ s, editorId }) {
         </div>
       </div>
       <KycBanner role="editor" person={me} compact />
-      <div className="stat-grid">
-        <Stat label="Earned so far" value={inr(money.earned)} tone="green" />
-        <Stat label="In progress" value={inr(money.inProgress)} sub={`${active.length} active`} />
-        <Stat label="Rating" value={me.ratings ? `${me.rating}★` : 'New'} sub={`${me.ratings} reviews`} tone="amber" />
-        <Stat label="Next payout" value={PAYOUTS.schedule.replace('Every ', '')} sub={`${PAYOUTS.method} · ${me.upi || 'add UPI in KYC'}`} />
-      </div>
       <Tabs
         value={tab}
         onChange={setTab}
+        bottom
         tabs={[
-          { id: 'jobs', label: 'New jobs', count: open.length },
-          { id: 'work', label: 'My work', count: active.length },
-          { id: 'earn', label: 'Earnings' },
-          { id: 'profile', label: 'Profile' },
+          { id: 'dash', label: 'Dashboard', icon: 'chart' },
+          { id: 'jobs', label: 'New jobs', icon: 'inbox', count: open.length },
+          { id: 'work', label: 'My work', icon: 'cut', count: active.length },
+          { id: 'earn', label: 'Earnings', icon: 'rupee' },
+          { id: 'profile', label: 'Profile', icon: 'user' },
         ]}
       />
+      {tab === 'dash' && <Dashboard s={s} me={me} money={money} active={active} open={open} go={setTab} />}
       {tab === 'jobs' && <Jobs s={s} me={me} open={open} />}
       {tab === 'work' && <Work s={s} mine={mine} />}
       {tab === 'earn' && <Earnings s={s} me={me} money={money} />}
       {tab === 'profile' && <Profile me={me} />}
+    </div>
+  )
+}
+
+function Dashboard({ s, me, money, active, open, go }) {
+  const [days, setDays] = useState(30)
+  const m = useMemo(() => editorMetrics(s, me.id, days), [s, me.id, days])
+  const earnSeries = [{ name: 'Earned', values: m.earnDaily }]
+  const jobSeries = [{ name: 'Jobs delivered', values: m.jobsDaily, color: 'var(--series-3)' }]
+  const ratingSeries = [{ name: 'Rating (7-day avg)', values: m.ratingDaily, color: 'var(--series-4)' }]
+  const pts = (v, p) => (v == null || p == null ? null : v - p)
+  return (
+    <div className="stack">
+      <section className="balance-hero green">
+        <div>
+          <p className="kicker">// ready for monday</p>
+          <div className="balance-num">{inr(money.available)}</div>
+          <p className="muted small">
+            Paid {PAYOUTS.schedule.toLowerCase()} by {PAYOUTS.method} to {me.upi || 'your verified UPI'} · {inr(money.inProgress)} more in progress
+          </p>
+        </div>
+        <div className="balance-actions">
+          <button className="btn btn-green" onClick={() => go('jobs')}>
+            <Icon name="inbox" size={18} /> {open.length} new job{open.length === 1 ? '' : 's'}
+          </button>
+          <button className="btn btn-ghost" onClick={() => go('work')}>
+            <Icon name="cut" size={18} /> {active.length} in progress
+          </button>
+        </div>
+      </section>
+      <div className="dash-head">
+        <h3 className="section-title">Your performance</h3>
+        <RangePicker value={days} onChange={setDays} />
+      </div>
+      <div className="kpi-grid four">
+        <Kpi label="Earned" value={inr(m.earned.value)} delta={m.earned.delta} spark={m.earnDaily} color="var(--series-1)" />
+        <Kpi label="Jobs delivered" value={fmtNum(m.jobs.value)} delta={m.jobs.delta} spark={m.jobsDaily} color="var(--series-3)" />
+        <Kpi label="On time" value={fmtPct(m.onTime.value)} delta={pts(m.onTime.value, m.onTime.prev)} hint="no jobs yet" />
+        <Kpi label="Avg rating" value={m.stars.value == null ? 'New' : m.stars.value.toFixed(2) + '★'} delta={pts(m.stars.value, m.stars.prev) == null ? null : pts(m.stars.value, m.stars.prev) / 5} hint={`${me.ratings} reviews`} />
+      </div>
+      <ChartCard title="Earnings per day" sub={`Last ${days} days · ₹ credited when the creator approves`} table={seriesTable(m.axis, earnSeries, fmtInr)}>
+        <TrendChart axis={m.axis} series={earnSeries} type="area" format={fmtInr} tickFormat={fmtInrShort} />
+      </ChartCard>
+      <div className="chart-row">
+        <ChartCard title="Jobs delivered" sub="Per day" table={seriesTable(m.axis, jobSeries)}>
+          <TrendChart axis={m.axis} series={jobSeries} type="bar" height={180} />
+        </ChartCard>
+        <ChartCard title="Rating trend" sub="7-day rolling average" table={seriesTable(m.axis, ratingSeries, (v) => (v == null ? '—' : v.toFixed(2)))}>
+          <TrendChart axis={m.axis} series={ratingSeries} type="line" height={180} minY={1} maxY={5} format={(v) => (v == null ? '—' : v.toFixed(2) + '★')} tickFormat={(v) => v.toFixed(0)} />
+        </ChartCard>
+      </div>
     </div>
   )
 }
