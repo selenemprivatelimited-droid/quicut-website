@@ -54,18 +54,49 @@ export function Credits({ n, big }) {
   )
 }
 
-export function Tabs({ tabs, value, onChange }) {
+const ICONS = {
+  home: 'M3 11.5 12 4l9 7.5M5.5 9.5V20h13V9.5',
+  plus: 'M12 5v14M5 12h14',
+  list: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01',
+  wallet: 'M3 7.5A2.5 2.5 0 0 1 5.5 5H19v3M3 7.5V18a2 2 0 0 0 2 2h15V9H5.5A2.5 2.5 0 0 1 3 7.5ZM16.5 14.5h.01',
+  user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 20.5c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5',
+  chart: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
+  inbox: 'M4 13h4l1.5 3h5L16 13h4M4 13l2.5-8h11L20 13v6H4v-6Z',
+  cut: 'M6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM8.1 7.9 20 20M8.1 16.1 20 4',
+  rupee: 'M6 4h12M6 9h12M14 4c3 0 3 10-3 10H6l9 7',
+  shield: 'M12 3 4.5 6v6c0 4.5 3.2 7.8 7.5 9 4.3-1.2 7.5-4.5 7.5-9V6L12 3Z',
+  users: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM2.5 20c1-3 3.5-4.5 6.5-4.5s5.5 1.5 6.5 4.5M16 4.5a3.5 3.5 0 0 1 0 6.5M18 15.6c2 .6 3.2 2.1 3.7 4.4',
+  tag: 'M3 12V4h8l10 10-8 8L3 12ZM7.5 8.5h.01',
+  spark: 'M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6',
+  alert: 'M12 4 2.5 20h19L12 4ZM12 10v4.5M12 17.5h.01',
+  logout: 'M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10',
+  pulse: 'M2 12h4l2.5-6 4 13 3-9 1.5 2H22',
+}
+export function Icon({ name, size = 20 }) {
   return (
-    <nav className="tabs" role="tablist">
+    <svg className="ico" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={ICONS[name] || ICONS.spark} />
+    </svg>
+  )
+}
+
+/** Tabs. With `bottom`, phones get a native-style bottom tab bar (icon + label); larger screens keep top tabs. */
+export function Tabs({ tabs, value, onChange, bottom }) {
+  return (
+    <nav className={'tabs' + (bottom ? ' tabs-bottom' : '')} role="tablist">
       {tabs.map((t) => (
         <button
           key={t.id}
           role="tab"
           aria-selected={value === t.id}
           className={'tab' + (value === t.id ? ' is-on' : '')}
-          onClick={() => onChange(t.id)}
+          onClick={() => {
+            onChange(t.id)
+            if (bottom && typeof window !== 'undefined' && window.innerWidth < 760) window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
         >
-          {t.label}
+          {t.icon && <Icon name={t.icon} size={22} />}
+          <span className="tab-lbl">{t.label}</span>
           {t.count ? <span className="tab-count">{t.count}</span> : null}
         </button>
       ))}

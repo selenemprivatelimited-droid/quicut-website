@@ -5,14 +5,13 @@ import { MODE } from './services/payments.js'
 import { Toaster, toast } from './ui.jsx'
 import Creator from './views/Creator.jsx'
 import Editor from './views/Editor.jsx'
-import Admin from './views/Admin.jsx'
 import IntroSplash from '../intro/IntroSplash.jsx'
 import Copilot from './views/Copilot.jsx'
 
+// Admin is not part of the public app. It lives at /admin/ and opens only for allow-listed admin emails.
 const ROLES = [
   { id: 'creator', label: 'Creator' },
   { id: 'editor', label: 'Editor' },
-  { id: 'admin', label: 'Admin' },
 ]
 
 function initialRole() {
@@ -30,7 +29,7 @@ export default function App() {
     history.replaceState(null, '', '#' + r)
   }
 
-  const people = role === 'creator' ? s.creators : role === 'editor' ? s.editors : null
+  const people = (role === 'creator' ? s.creators : s.editors).filter((p) => !p.deleted).slice(0, 6)
   const who = role === 'creator' ? creatorId : editorId
   const setWho = role === 'creator' ? setCreatorId : setEditorId
 
@@ -71,8 +70,8 @@ export default function App() {
       {MODE === 'demo' && (
         <div className="demo-bar">
           <span>
-            <b>Demo mode.</b> Payments are simulated and data stays in this browser. Switch roles above to follow an order
-            from creator to editor to admin.
+            <b>Demo mode.</b> Payments are simulated and data stays in this browser. Switch between Creator and Editor above to
+            follow an order end to end.
           </span>
           <button
             className="link-btn"
@@ -89,7 +88,6 @@ export default function App() {
       <main className="view">
         {role === 'creator' && <Creator s={s} creatorId={creatorId} />}
         {role === 'editor' && <Editor s={s} editorId={editorId} />}
-        {role === 'admin' && <Admin s={s} />}
       </main>
       <Copilot role={role} s={s} ids={{ creatorId, editorId }} />
       <Toaster />
