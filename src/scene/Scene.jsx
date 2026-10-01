@@ -39,7 +39,7 @@ const POSES_WIDE = {
   join: { x: 0, y: 1.35, z: -0.6, s: 0.62, ry: 6, rx: 0 },
 }
 const POSES_NARROW = {
-  hero: { x: 0, y: 1.95, z: -1.5, s: 0.66, ry: 0, rx: 0 },
+  hero: { x: 0, y: 1.7, z: -1.5, s: 0.5, ry: 0, rx: 0 },
   how: { x: 0.9, y: 2.2, z: -7, s: 0.8, ry: 1, rx: 0 },
   numbers: { x: -0.9, y: 0, z: -8, s: 0.8, ry: 2, rx: 0 },
   pricing: { x: 0, y: 0, z: -9, s: 0.8, ry: 3, rx: 0 },
@@ -167,6 +167,10 @@ function QLogo({ narrow }) {
     const p = target()
     const k = 1 - Math.exp(-dt * 3.2)
     const s = state.current
+    if (!s.ready) {
+      Object.assign(s, p) // start at the current section's pose, no slide-in
+      s.ready = true
+    }
     for (const key of ['x', 'y', 'z', 's', 'ry', 'rx']) s[key] += (p[key] - s[key]) * k
 
     const vh = window.innerHeight
