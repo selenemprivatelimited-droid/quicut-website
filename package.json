@@ -6,7 +6,7 @@
   "description": "QuiCut marketing website — 3D landing page built with React Three Fiber",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/assemble-intro.mjs && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
