@@ -98,8 +98,10 @@ Read it and return ONLY a JSON object with these keys:
 "language": the language(s) the brief is written in, e.g. "Telugu (in English letters)",
 "summary": one or two plain English sentences an editor can act on,
 "checklist": array of 3 to 8 objects {"item": short instruction for the editor, "detail": optional extra detail}, covering colour grade, music, pacing, text, captions, format, and anything else asked,
-"suggestedType": the best tier id from the list,
-"suggestedAddons": array of add-on ids the brief clearly asks for (may be empty),
+"suggestedType": the tier id that fits the KIND of video: weddings, engagements and events -> wedding (even for a short teaser);
+gaming, BGMI or montages -> gaming; premium cinematic films -> cinematic; a single short vertical clip only -> reel; otherwise vlog,
+"suggestedAddons": add-on ids the creator explicitly asked for, using these rules only: captions/subtitles -> captions,
+thumbnail -> thumb, motion graphics/animated titles -> motion, urgent/fast delivery -> express, project files -> raw. Otherwise an empty array,
 "questions": array of 0 to 3 short questions to ask the creator if something important is missing.
 Only use tier and add-on ids from this list:
 ${catalogText(body.catalog)}`
@@ -144,6 +146,7 @@ async function ops(env, body) {
 You are the QuiCut operations analyst. From the JSON snapshot of the platform, write today's ops brief for the founder.
 Follow the SOPs: deadlines first, then orders unassigned for over 2 hours, ratings of 2 stars or less or editor averages under 4.2,
 3+ revisions, pending KYC, payouts due, account deletion requests. Use only facts in the snapshot, with order ids and names.
+Only list things that need attention or are worth knowing; never add items that say nothing is wrong or "none".
 Return ONLY JSON: {"headline": "one sentence on how today looks", "items": [{"level": "urgent"|"soon"|"fyi", "text": "what is happening", "action": "what to do"}] (max 8),
 "numbers": "one line with the key money and order numbers"}`
   const j = parseJson(await run(env, [{ role: 'system', content: sys }, { role: 'user', content: snap }], { maxTokens: 800, jsonMode: true }))
@@ -170,7 +173,7 @@ async function chat(env, body) {
   const sys = `${ABOUT}
 ${ROLE_HINT[role]}
 Use the context below as the truth about this user's account; do not invent orders, balances or people. If something is not in the context, say so.
-Reply in the language the user writes in (Telugu or Hindi in English letters is fine). Keep answers under 120 words, plain text, no markdown tables.
+Reply in the language the user writes in (Telugu or Hindi in English letters is fine), speaking to the user as "you" (Telugu: "meeru"/"mee", Hindi: "aap"). Keep answers under 120 words, plain text, no markdown tables.
 Context: ${ctx}`
   const text = await run(env, [{ role: 'system', content: sys }, ...msgs], { maxTokens: 450 })
   return { reply: text.trim() }
