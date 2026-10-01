@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { EDIT_TYPES, ADDONS, CREDIT_PACKS, PACKS_ARE_PLACEHOLDER, PAYOUTS, packTotal, editType } from '../config/pricing.js'
+import { EDIT_TYPES, ADDONS, CREDIT_PACKS, PACKS_ARE_PLACEHOLDER, PAYOUTS, packTotal, packPrice, editType } from '../config/pricing.js'
 import { MODE } from '../services/payments.js'
 import { KYC_MODE } from '../services/kyc.js'
 import {
@@ -588,10 +588,11 @@ function Pricing() {
             {CREDIT_PACKS.map((p) => (
               <tr key={p.id}>
                 <td>
-                  {p.id} {p.tag && <span className="muted small">· {p.tag}</span>}
+                  {p.name || p.id} {p.tag && <span className="muted small">· {p.tag}</span>}
+                  {p.fits && <div className="muted small">{p.fits}</div>}
                 </td>
-                <td className="num">{inr(p.priceInr)}</td>
-                <td className="num">${p.priceUsd.toFixed(2)}</td>
+                <td className="num">{packPrice(p, 'IN')}</td>
+                <td className="num">{packPrice(p, 'GLOBAL')}</td>
                 <td className="num">
                   {qc(packTotal(p))}
                   {p.bonus ? <span className="muted small"> (+{qc(p.bonus)})</span> : ''}
