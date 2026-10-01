@@ -19,6 +19,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Saira:ital,wght@1,800&family=Noto+Sans+Telugu:wght@500&family=Noto+Sans+Devanagari:wght@500&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/src/app/app.css" />
     <link rel="stylesheet" href="/src/app/dash.css" />
+    <style>
+      /* keep the AI button out of the way while a sheet (sign-in, checkout, order) is open */
+      body:has(.sheet-wrap) .ai-fab:not(.is-open) {
+        display: none;
+      }
+    </style>
   </head>
   <body>
     <div id="app-root"></div>
