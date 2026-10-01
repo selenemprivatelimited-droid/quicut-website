@@ -16,6 +16,8 @@ import {
   completeDeletion,
 } from '../services/store.js'
 import { Tabs, Pill, Empty, Stat, Credits, toast, inr, qc, ago, dueIn } from '../ui.jsx'
+import { aiOps, aiChat, opsSnapshot } from '../services/ai.js'
+import { AiCard } from './Copilot.jsx'
 
 export default function Admin({ s }) {
   const [tab, setTab] = useState('overview')
@@ -58,10 +60,75 @@ export default function Admin({ s }) {
   )
 }
 
+const LEVEL = { urgent: 'alert-bad', soon: 'alert-warn', fyi: 'alert-info' }
+const tabFor = (t) => (/kyc|verif/i.test(t) ? 'kyc' : /payout|upi/i.test(t) ? 'payouts' : /QC-\d+|order|deadline|late|unassigned/i.test(t) ? 'orders' : 'people')
+
+function OpsBrief({ s, go }) {
+  const [brief, setBrief] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [q, setQ] = useState('')
+  const [ans, setAns] = useState(null)
+  const [asking, setAsking] = useState(false)
+  const run = async () => {
+    setBusy(true)
+    setBrief(await aiOps(s))
+    setBusy(false)
+  }
+  const ask = async (e) => {
+    e.preventDefault()
+    if (!q.trim()) return
+    setAsking(true)
+    setAns(await aiChat('admin', [{ role: 'user', content: q.trim() }], opsSnapshot(s)))
+    setAsking(false)
+  }
+  return (
+    <section className="ops-ai">
+      <div className="ops-ai-head">
+        <div>
+          <p className="kicker">// ai ops desk</p>
+          <h3>Today at QuiCut</h3>
+        </div>
+        <button className="btn btn-ai btn-sm" onClick={run} disabled={busy}>
+          {busy ? 'Reading all orders…' : brief ? '✦ Refresh brief' : "✦ Generate today's brief"}
+        </button>
+      </div>
+      {brief && (
+        <AiCard title="Ops brief" source={brief.source} onClose={() => setBrief(null)}>
+          <p className="strong">{brief.headline}</p>
+          {brief.numbers && <p className="mono small muted">{brief.numbers}</p>}
+          <div className="list">
+            {brief.items.map((it, i) => (
+              <button key={i} className={`alert ${LEVEL[it.level]} alert-btn`} onClick={() => go(tabFor(it.text + ' ' + it.action))}>
+                <div>
+                  <div className="row-title">{it.text}</div>
+                  {it.action && <div className="row-meta">→ {it.action}</div>}
+                </div>
+                <span className={`pill ${it.level === 'urgent' ? 'pill-amber' : 'pill-muted'}`}>{it.level}</span>
+              </button>
+            ))}
+          </div>
+        </AiCard>
+      )}
+      <form className="ask-data" onSubmit={ask}>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ask your data: which editor is fastest? how much is owed to editors?" aria-label="Ask a question about the platform data" maxLength={300} />
+        <button className="btn btn-ghost btn-sm" type="submit" disabled={asking || !q.trim()}>
+          {asking ? 'Thinking…' : 'Ask'}
+        </button>
+      </form>
+      {ans && (
+        <AiCard title="Answer" source={ans.source} onClose={() => setAns(null)}>
+          <p className="pre">{ans.reply}</p>
+        </AiCard>
+      )}
+    </section>
+  )
+}
+
 function Overview({ s, al, go }) {
   const k = platformStats(s)
   return (
     <div className="stack">
+      <OpsBrief s={s} go={go} />
       <div className="stat-grid">
         <Stat label="Cash collected" value={inr(k.cashInInr)} sub={k.cashInUsd ? `+ $${k.cashInUsd.toFixed(2)} via Stripe` : 'Razorpay · INR'} tone="green" />
         <Stat label="Delivered GMV" value={inr(k.gmv)} sub={`${k.done} orders delivered`} />
