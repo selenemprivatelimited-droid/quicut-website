@@ -65,6 +65,14 @@ Tables: `profiles`, `orders`, `payments`, `credit_ledger`, `payouts`, `admins`, 
 Money and credit changes are written only by the server (payment webhooks with the secret key).
 Footage goes to Cloudflare R2; KYC documents stay with the KYC provider.
 
+**Live mode.** Visitors see the demo. Signing in with an email link (top right of the app) switches to
+real data: first sign-in sets up a creator or editor account, then KYC. Every action that moves money or
+changes an order runs as a checked server function (`supabase/migrations/`): placing an order checks
+KYC and the credit balance, prices come from the `edit_types` / `addons` tables, approving a delivery
+pays the editor, payouts need Rs 500 and a verified UPI. Browsers can only read their own rows. Until
+Razorpay / Stripe are connected, admins approve KYC and add credits from `/admin/` (Accounts), and mark
+weekly UPI payouts as paid with the transfer reference.
+
 ## QuiCut AI
 
 - **Creator:** AI brief agent (reads Telugu / Hindi / English briefs, writes the editor checklist, suggests tier and add-ons), voice input, and an assistant chat.
@@ -113,6 +121,7 @@ src/
   monitor.jsx        error tracking + Web Vitals reporter, used by every page
 admin/index.html     admin entry page (noindex)
 workers/ai/          Cloudflare Worker behind api.quicutapp.com (Workers AI)
+supabase/migrations/ database schema, row-level security and server functions
 public/              favicon.svg, manifest.webmanifest
 scripts/build-preview.mjs   no-install single-page preview build (bun + jsDelivr import map)
 ```
