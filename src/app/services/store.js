@@ -1,4 +1,4 @@
-// ─────────────────────────────────────────────────────────────────────────────
+//
 // App data. In demo mode everything lives in this browser (localStorage).
 // Each exported action maps 1:1 to a future backend endpoint, so the screens
 // will not change when a real database (Supabase / Firebase / Postgres) arrives.
@@ -9,13 +9,14 @@
 // Gates
 //   KYC verified is required for: buying credits, placing orders (creator);
 //   accepting jobs, requesting payouts (editor).
-// ─────────────────────────────────────────────────────────────────────────────
+//
 import { useSyncExternalStore } from 'react'
 import { quote, packTotal, editType, PAYOUTS, INR_PER_CREDIT, REGIONS } from '../config/pricing.js'
 import { chargeForPack, sendPayout } from './payments.js'
 import { submitKyc, maskId } from './kyc.js'
+import { addHistory } from './history.js'
 
-const KEY = 'quicut-app-v2'
+const KEY = 'quicut-app-v3'
 const listeners = new Set()
 const now = () => new Date().toISOString()
 const hoursAgo = (h) => new Date(Date.now() - h * 3600e3).toISOString()
@@ -42,15 +43,17 @@ function seed() {
     payouts: [],
     deletions: [],
   }
+  addHistory(s, { verified })
   const buy = (creatorId, credits, inr, at) =>
     s.ledger.push({ id: `L-${s.ledger.length + 1}`, creatorId, type: 'purchase', credits, inr, currency: 'INR', note: `Pack ₹${inr} · UPI`, at })
   buy('c1', 2750, 2499, hoursAgo(90))
   buy('c2', 5750, 4999, hoursAgo(60))
 
+  let live = 0
   const mk = (o) => {
     const q = quote(o.typeId, o.addons)
     const order = {
-      id: `QC-${1040 + s.orders.length}`,
+      id: `QC-${1040 + live++}`,
       brief: '',
       addons: [],
       footage: 'raw_footage.mp4',
@@ -67,11 +70,13 @@ function seed() {
     return order
   }
   const done = mk({ creatorId: 'c1', typeId: 'gaming', title: 'BGMI Season 3 Highlights', status: 'completed', editorId: 'e1', at: hoursAgo(80), stars: 5, brief: 'Fast cuts, phonk music, cool blue grade.' })
+  done.doneAt = hoursAgo(62)
   done.deliveryUrl = 'https://example.com/quicut-demo-delivery'
   s.earnings.push({ id: 'E-1', editorId: 'e1', orderId: done.id, inr: done.editorPayInr, at: hoursAgo(60) })
   mk({ creatorId: 'c1', typeId: 'vlog', addons: ['captions'], title: 'Araku Valley Travel Vlog', status: 'editing', editorId: 'e2', at: hoursAgo(10), brief: 'Telugu lo edit cheyyandi. Warm colour grade, Telugu background music, forest part lo slow motion.' })
   mk({ creatorId: 'c2', typeId: 'reel', title: 'Ooty Trip Reel', status: 'paid', at: hoursAgo(14), brief: 'Cinematic golden tones, trending Insta BGM, 9:16.' })
   mk({ creatorId: 'c2', typeId: 'wedding', addons: ['thumb'], title: 'Kiran & Divya Wedding Teaser', status: 'paid', at: hoursAgo(1), brief: 'Emotional, slow motion on entry, Telugu songs.' })
+  s.orders.sort((a, b) => new Date(b.at) - new Date(a.at))
   return s
 }
 
@@ -112,7 +117,7 @@ export const resetDemo = () => set((d) => Object.assign(d, seed()))
 const person = (d, role, id) => (role === 'creator' ? d.creators : d.editors).find((p) => p.id === id)
 export const isVerified = (p) => p?.kyc?.status === 'verified'
 
-// ── Derived values ──────────────────────────────────────────────────────────
+// ── Derived values ──
 export const creditBalance = (s, creatorId) =>
   s.ledger.filter((l) => l.creatorId === creatorId).reduce((sum, l) => sum + l.credits, 0)
 
@@ -161,15 +166,17 @@ export function alerts(s) {
   }
   for (const e of s.editors) {
     if (e.ratings >= 5 && e.rating < 4.2) out.push({ kind: 'avg', level: 'bad', editorId: e.id, text: `${e.name} average dropped to ${e.rating}★`, action: 'Quality review meeting within 24 hours.' })
-    const revs = s.orders.filter((o) => o.editorId === e.id).reduce((a, o) => a + o.revisions, 0)
-    if (revs >= 3) out.push({ kind: 'revisions', level: 'warn', editorId: e.id, text: `${e.name} has ${revs} revision requests`, action: 'Review recent deliveries.' })
+    const week = s.orders.filter((o) => o.editorId === e.id && t - new Date(o.at).getTime() < 7 * 864e5)
+    const revs = week.reduce((a, o) => a + (o.revisions || 0), 0)
+    if (revs >= 3 && revs / week.length >= 0.3)
+      out.push({ kind: 'revisions', level: 'warn', editorId: e.id, text: `${e.name} had ${revs} revision requests on ${week.length} jobs this week`, action: 'Review recent deliveries.' })
   }
   const kycQueue = [...s.creators, ...s.editors].filter((p) => p.kyc?.status === 'pending').length
   if (kycQueue) out.push({ kind: 'kyc', level: 'warn', text: `${kycQueue} KYC ${kycQueue === 1 ? 'check' : 'checks'} waiting for review`, action: 'Approve or reject in People → KYC.' })
   return out
 }
 
-// ── KYC ─────────────────────────────────────────────────────────────────────
+// ── KYC ──
 export async function startKyc(role, id, fields) {
   const res = await submitKyc(role, fields)
   if (!res.ok) throw new Error('Verification could not start. Try again.')
@@ -196,7 +203,7 @@ export const reviewKyc = (role, id, approve, note = '') =>
     if (approve && role === 'editor' && p.kyc.upi) p.upi = p.kyc.upi
   })
 
-// ── Creator actions ─────────────────────────────────────────────────────────
+// ── Creator actions ──
 export async function buyPack(creator, pack, region, method) {
   if (!isVerified(creator)) throw new Error('Complete KYC before buying credits.')
   const pay = await chargeForPack(pack, creator, region, method)
@@ -260,7 +267,7 @@ function move(d, orderId, status, patch = {}) {
 
 export const approveDelivery = (orderId, stars = 5) =>
   set((d) => {
-    const o = move(d, orderId, 'completed', { stars })
+    const o = move(d, orderId, 'completed', { stars, doneAt: now() })
     d.earnings.push({ id: nextId('E'), editorId: o.editorId, orderId, inr: o.editorPayInr, at: now() })
     const e = d.editors.find((x) => x.id === o.editorId)
     e.rating = Math.round(((e.rating * e.ratings + stars) / (e.ratings + 1)) * 10) / 10
@@ -279,7 +286,7 @@ export const requestDeletion = (creatorId) =>
       d.deletions.unshift({ id: nextId('D'), role: 'creator', userId: creatorId, status: 'requested', at: now() })
   })
 
-// ── Shared: order messages + editor checklist ─────────────────────────────
+// ── Shared: order messages + editor checklist ──
 export const sendMessage = (orderId, from, text) =>
   set((d) => {
     const o = d.orders.find((x) => x.id === orderId)
@@ -292,7 +299,7 @@ export const toggleStep = (orderId, key) =>
     o.done = { ...(o.done || {}), [key]: !(o.done || {})[key] }
   })
 
-// ── Editor actions ──────────────────────────────────────────────────────────
+// ── Editor actions ──
 export function acceptJob(orderId, editorId) {
   const e = state.editors.find((x) => x.id === editorId)
   if (!isVerified(e)) throw new Error('Your KYC must be approved before you take jobs.')
@@ -308,7 +315,7 @@ export function requestPayout(editorId) {
   set((d) => d.payouts.unshift({ id: nextId('P'), editorId, inr: m.available, status: 'requested', at: now() }))
 }
 
-// ── Admin actions ───────────────────────────────────────────────────────────
+// ── Admin actions ──
 export const assignEditor = (orderId, editorId) => set((d) => move(d, orderId, 'editing', { editorId }))
 
 export const refundOrder = (orderId, reason) =>
