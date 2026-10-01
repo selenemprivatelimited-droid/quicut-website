@@ -1,11 +1,11 @@
-# QuiCut website
+# QuiCut website + app
 
-The 3D marketing site for **QuiCut**, India's video editing marketplace for creators.
+The 3D marketing site and the web app (creator, editor and admin views) for **QuiCut**, India's video editing marketplace for creators.
 Built with [React Three Fiber](https://github.com/pmndrs/react-three-fiber) + three.js + Vite.
 
 ## What's on the page
 
-- Intro reel (your logo animation, `public/intro.mp4`) that hands off to a live 3D scene
+- Animated intro (code-drawn, plays on the website and the app) that hands off to a live 3D scene
 - 3D extruded **Q** that the blade cuts into two halves (click it to cut again), red bloom glow, sparkles,
   and film-strip rings that orbit the logo as you scroll; the Q glides to the free side of each section
 - How it works (4 steps + order tracking stages)
@@ -23,10 +23,20 @@ npm run dev        # http://localhost:5173
 npm run build      # static site in dist/
 ```
 
-## Intro reel
+## Intro
 
-`public/intro.mp4` plays as a splash on first visit, then hands off to the 3D Q.
-If the file is missing the splash is skipped automatically.
+`src/intro/intro.js` draws the intro on a canvas: quick cuts (SHOOT IT. / SEND IT. / DONE.), the Q
+assembling from blade-cut shards, the slash with sparks, UICUT slicing in, a light sweep and the
+tagline. It plays once per browser session on both `index.html` and `app.html`, has a Skip button,
+and is skipped for people who prefer reduced motion. `drawIntro(ctx, t, w, h)` is a pure function of
+time, so the same code also renders the MP4 versions of the intro frame by frame.
+
+## Web app (`/app.html`)
+
+Creator, editor and admin views with QuiCut Credits, per-video editor pay, KYC and payouts.
+Runs in demo mode (data in the browser). Prices and credit packs: `src/app/config/pricing.js`.
+Payments (Razorpay for India, Stripe with Apple Pay / Google Pay for global): `src/app/services/payments.js`.
+KYC: `src/app/services/kyc.js`.
 
 ## Edit content
 
@@ -59,7 +69,9 @@ src/
   scene/Scene.jsx    R3F canvas: Q logo, blade, ribbons, sparkles, bloom, scroll choreography
   scene/geometry.js  Q / blade shapes, film-strip + glow textures
   Logo.jsx           QuiCut wordmark as inline SVG
-public/              favicon.svg, intro.mp4 (logo reel)
+  intro/             animated intro (canvas) shared by site and app
+  app/               web app: views, services (store, payments, KYC), pricing config
+public/              favicon.svg
 scripts/build-preview.mjs   no-install single-page preview build (bun + jsDelivr import map)
 ```
 

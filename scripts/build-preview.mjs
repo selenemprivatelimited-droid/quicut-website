@@ -37,5 +37,5 @@ ${fonts}
 <script type="module">${app.replace(/<\/script/g, '<\\/script')}</script>
 `
 writeFileSync('preview/index.html', html)
-for (const f of ['intro.mp4', 'favicon.svg']) copyFileSync('public/' + f, 'preview/' + f)
+for (const f of ['favicon.svg']) copyFileSync('public/' + f, 'preview/' + f)
 console.log('preview/index.html', html.length, 'bytes')

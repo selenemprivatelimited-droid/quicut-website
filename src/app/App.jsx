@@ -6,6 +6,7 @@ import { Toaster, toast } from './ui.jsx'
 import Creator from './views/Creator.jsx'
 import Editor from './views/Editor.jsx'
 import Admin from './views/Admin.jsx'
+import IntroSplash from '../intro/IntroSplash.jsx'
 
 const ROLES = [
   { id: 'creator', label: 'Creator' },
@@ -34,6 +35,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <IntroSplash />
       <header className="topbar">
         <a href="./" className="brand" aria-label="QuiCut website">
           <Logo height={24} id="app-logo" />

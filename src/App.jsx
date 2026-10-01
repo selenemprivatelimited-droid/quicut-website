@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Scene from './scene/Scene.jsx'
 import Logo from './Logo.jsx'
 import { startIntro, sceneState } from './store.js'
+import IntroSplash from './intro/IntroSplash.jsx'
 import {
   TIERS,
   ADDONS,
@@ -15,67 +16,6 @@ import {
 } from './content.js'
 
 const inr = (n) => '₹' + Math.round(n).toLocaleString('en-IN')
-
-const safeSession = {
-  get(k) {
-    try {
-      return sessionStorage.getItem(k)
-    } catch {
-      return null
-    }
-  },
-  set(k, v) {
-    try {
-      sessionStorage.setItem(k, v)
-    } catch {
-      /* storage blocked */
-    }
-  },
-}
-
-/* ---------- Intro reel (your logo animation) ---------- */
-function Splash() {
-  const skip = sceneState.reducedMotion || safeSession.get('qc-intro') === '1'
-  const [state, setState] = useState(skip ? 'gone' : 'playing')
-  const video = useRef()
-
-  const finish = () => {
-    setState((s) => (s === 'playing' ? 'leaving' : s))
-    safeSession.set('qc-intro', '1')
-    startIntro()
-  }
-
-  useEffect(() => {
-    if (skip) {
-      startIntro()
-      return
-    }
-    const v = video.current
-    if (v) {
-      v.playbackRate = 1.5
-      const p = v.play()
-      if (p && p.catch) p.catch(finish)
-    }
-    const timer = setTimeout(finish, 8000)
-    return () => clearTimeout(timer)
-  }, [])
-
-  useEffect(() => {
-    if (state !== 'leaving') return
-    const t = setTimeout(() => setState('gone'), 700)
-    return () => clearTimeout(t)
-  }, [state])
-
-  if (state === 'gone') return null
-  return (
-    <div className={'splash' + (state === 'leaving' ? ' is-leaving' : '')}>
-      <video ref={video} src="intro.mp4" muted playsInline preload="auto" onEnded={finish} onError={finish} />
-      <button className="splash-skip" type="button" onClick={finish}>
-        Skip intro
-      </button>
-    </div>
-  )
-}
 
 function Nav() {
   const [solid, setSolid] = useState(false)
@@ -95,6 +35,7 @@ function Nav() {
         <a href="#pricing">Pricing</a>
         <a href="#languages">Languages</a>
         <a href="#editors">For editors</a>
+        <a href="app.html">Open the app</a>
       </nav>
       <a className="btn btn-red btn-sm" href="#join">
         Join the waitlist
@@ -621,7 +562,7 @@ export default function App() {
   return (
     <>
       {webgl ? <Scene /> : <div className="scene scene-fallback" />}
-      <Splash />
+      <IntroSplash onFinish={startIntro} />
       <Nav />
       <main>
         <Hero />
