@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   EDIT_TYPES,
   ADDONS,
@@ -17,7 +17,9 @@ import { aiBrief } from '../services/ai.js'
 import { AiCard, VoiceButton } from './Copilot.jsx'
 import OrderThread from './OrderThread.jsx'
 import { KycBanner } from './Kyc.jsx'
-import { Tabs, Credits, Coin, Pill, Empty, Sheet, Timeline, Stars, toast, qc, ago, dueIn } from '../ui.jsx'
+import { Tabs, Credits, Coin, Pill, Empty, Sheet, Timeline, Stars, Icon, toast, qc, ago, dueIn } from '../ui.jsx'
+import { creatorMetrics } from '../services/metrics.js'
+import { TrendChart, HBars, Kpi, RangePicker, ChartCard, seriesTable, fmtNum, useAnimatedNumber } from '../charts.jsx'
 
 export default function Creator({ s, creatorId }) {
   const [tab, setTab] = useState('home')
@@ -42,15 +44,16 @@ export default function Creator({ s, creatorId }) {
       <Tabs
         value={tab}
         onChange={setTab}
+        bottom
         tabs={[
-          { id: 'home', label: 'Home' },
-          { id: 'new', label: 'New edit' },
-          { id: 'orders', label: 'Orders', count: toReview },
-          { id: 'wallet', label: 'Wallet' },
-          { id: 'profile', label: 'Profile' },
+          { id: 'home', label: 'Home', icon: 'home' },
+          { id: 'new', label: 'New edit', icon: 'plus' },
+          { id: 'orders', label: 'Orders', icon: 'list', count: toReview },
+          { id: 'wallet', label: 'Wallet', icon: 'wallet' },
+          { id: 'profile', label: 'Profile', icon: 'user' },
         ]}
       />
-      {tab === 'home' && <Home orders={orders} balance={balance} go={setTab} />}
+      {tab === 'home' && <Home s={s} creatorId={creatorId} orders={orders} balance={balance} go={setTab} />}
       {tab === 'new' && <NewEdit me={me} balance={balance} go={setTab} />}
       {tab === 'orders' && <Orders s={s} orders={orders} />}
       {tab === 'wallet' && <Wallet s={s} me={me} balance={balance} />}
@@ -59,20 +62,31 @@ export default function Creator({ s, creatorId }) {
   )
 }
 
-function Home({ orders, balance, go }) {
+function Home({ s, creatorId, orders, balance, go }) {
+  const [days, setDays] = useState(30)
+  const m = useMemo(() => creatorMetrics(s, creatorId, days), [s, creatorId, days])
   const active = orders.filter((o) => !['completed', 'refunded'].includes(o.status))
   const cheapest = Math.min(...EDIT_TYPES.map((t) => t.credits))
+  const shown = useAnimatedNumber(balance)
+  const spentSeries = [{ name: 'Credits spent', values: m.spentDaily }]
   return (
     <div className="stack">
-      <section className="hero-card">
+      <section className="balance-hero">
         <div>
-          <p className="kicker">// new project</p>
-          <h2>Start your next video edit</h2>
-          <p className="muted">From {qc(cheapest)} credits · delivered in 24 hours on most edits</p>
+          <p className="kicker">// your balance</p>
+          <div className="balance-num">
+            <Coin size={34} /> {qc(shown)}
+          </div>
+          <p className="muted small">Enough for {Math.floor(balance / 499)} Standard Vlog{Math.floor(balance / 499) === 1 ? '' : 's'} or {Math.floor(balance / 299)} Reels</p>
         </div>
-        <button className="btn btn-red" onClick={() => go('new')}>
-          Start project
-        </button>
+        <div className="balance-actions">
+          <button className="btn btn-red" onClick={() => go('new')}>
+            <Icon name="plus" size={18} /> New edit
+          </button>
+          <button className="btn btn-ghost" onClick={() => go('wallet')}>
+            <Icon name="wallet" size={18} /> Add credits
+          </button>
+        </div>
       </section>
       {balance < cheapest && (
         <div className="notice">
@@ -82,16 +96,34 @@ function Home({ orders, balance, go }) {
           </button>
         </div>
       )}
-      <h3 className="section-title">In progress</h3>
-      {active.length ? (
-        <div className="list">
-          {active.map((o) => (
-            <OrderRow key={o.id} o={o} onClick={() => go('orders')} />
-          ))}
-        </div>
-      ) : (
-        <Empty title="No edits in progress">Start one and it shows up here with a live countdown.</Empty>
+      {active.length > 0 && (
+        <>
+          <h3 className="section-title">In progress</h3>
+          <div className="list">
+            {active.map((o) => (
+              <OrderRow key={o.id} o={o} onClick={() => go('orders')} />
+            ))}
+          </div>
+        </>
       )}
+      <div className="dash-head">
+        <h3 className="section-title">Your activity</h3>
+        <RangePicker value={days} onChange={setDays} />
+      </div>
+      <div className="kpi-grid">
+        <Kpi label="Credits spent" value={qc(m.spent.value)} delta={m.spent.delta} spark={m.spentDaily} color="var(--series-1)" goodWhenUp={false} />
+        <Kpi label="Edits ordered" value={fmtNum(m.orders.value)} delta={m.orders.delta} spark={m.ordersDaily} color="var(--series-2)" />
+        <Kpi label="Avg delivery" value={m.avgHours == null ? '—' : `${Math.round(m.avgHours)} h`} hint={`last ${days} days`} />
+      </div>
+      <ChartCard title="Credits spent per day" sub={`Last ${days} days`} table={seriesTable(m.axis, spentSeries)}>
+        <TrendChart axis={m.axis} series={spentSeries} type="bar" format={(v) => qc(v || 0) + ' QC'} tickFormat={fmtNum} height={190} />
+      </ChartCard>
+      {m.byType.length > 0 && (
+        <ChartCard title="Edits by type" sub={`Last ${days} days`}>
+          <HBars items={[...m.byType].sort((a, b) => b.value - a.value)} />
+        </ChartCard>
+      )}
+      {!active.length && !orders.length && <Empty title="No edits yet">Start one and it shows up here with a live countdown.</Empty>}
     </div>
   )
 }
