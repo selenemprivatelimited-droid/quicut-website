@@ -12,12 +12,12 @@ import {
   editType,
   addon,
 } from '../config/pricing.js'
-import { creditBalance, buyPack, placeOrder, approveDelivery, askRevision, requestDeletion, isVerified } from '../services/store.js'
+import { creditBalance, buyPack, placeOrder, approveDelivery, askRevision, requestDeletion, isVerified, isLive } from '../services/store.js'
 import { aiBrief } from '../services/ai.js'
 import { AiCard, VoiceButton } from './Copilot.jsx'
 import OrderThread from './OrderThread.jsx'
 import { KycBanner } from './Kyc.jsx'
-import { Tabs, Credits, Coin, Pill, Empty, Sheet, Timeline, Stars, Icon, toast, qc, ago, dueIn } from '../ui.jsx'
+import { Tabs, Credits, Coin, Pill, Empty, Sheet, Timeline, Stars, Icon, toast, act, qc, ago, dueIn } from '../ui.jsx'
 import { creatorMetrics } from '../services/metrics.js'
 import { TrendChart, HBars, Kpi, RangePicker, ChartCard, seriesTable, fmtNum, useAnimatedNumber } from '../charts.jsx'
 
@@ -77,7 +77,7 @@ function Home({ s, creatorId, orders, balance, go }) {
           <div className="balance-num">
             <Coin size={34} /> {qc(shown)}
           </div>
-          <p className="muted small">Enough for {Math.floor(balance / 499)} Standard Vlog{Math.floor(balance / 499) === 1 ? '' : 's'} or {Math.floor(balance / 299)} Reels</p>
+          <p className="muted small">Enough for {Math.floor(balance / 499)} Standard Vlog{Math.floor(balance / 499) === 1 ? '' : 's'} or {Math.floor(balance / 299)} Reel{Math.floor(balance / 299) === 1 ? '' : 's'}</p>
         </div>
         <div className="balance-actions">
           <button className="btn btn-red" onClick={() => go('new')}>
@@ -171,15 +171,17 @@ function NewEdit({ me, balance, go }) {
 
   const toggle = (id) => setAdds((a) => (a.includes(id) ? a.filter((x) => x !== id) : [...a, id]))
 
-  const submit = (e) => {
+  const [placing, setPlacing] = useState(false)
+  const submit = async (e) => {
     e.preventDefault()
-    try {
-      const id = placeOrder({ creatorId: me.id, typeId, addons: adds, title: title.trim(), brief, footage: file?.name, checklist: ai?.checklist?.length ? ai : null })
-      toast(`${id} placed. ${qc(q.credits)} credits used.`)
-      go('orders')
-    } catch (err) {
-      toast(err.message, 'bad')
-    }
+    if (placing) return
+    setPlacing(true)
+    const id = await act(
+      () => placeOrder({ creatorId: me.id, typeId, addons: adds, title: title.trim(), brief, footage: file?.name, checklist: ai?.checklist?.length ? ai : null }),
+      (code) => `${code} placed. ${qc(q.credits)} credits used.`
+    )
+    setPlacing(false)
+    if (id) go('orders')
   }
 
   return (
@@ -298,8 +300,8 @@ function NewEdit({ me, balance, go }) {
             </button>
           </div>
         ) : (
-          <button className="btn btn-red" type="submit">
-            Confirm · {qc(q.credits)} {CREDIT.short}
+          <button className="btn btn-red" type="submit" disabled={placing}>
+            {placing ? 'Placing…' : 'Confirm'} · {qc(q.credits)} {CREDIT.short}
           </button>
         )}
       </div>
@@ -382,10 +384,8 @@ function OrderSheet({ s, o, onClose }) {
           </div>
           <button
             className="btn btn-red"
-            onClick={() => {
-              approveDelivery(o.id, stars)
-              toast('Approved. Your editor gets paid.')
-              onClose()
+            onClick={async () => {
+              if (await act(() => approveDelivery(o.id, stars).then(() => true), 'Approved. Your editor gets paid.')) onClose()
             }}
           >
             Approve and download
@@ -397,10 +397,8 @@ function OrderSheet({ s, o, onClose }) {
           <button
             className="btn btn-ghost"
             disabled={!note.trim()}
-            onClick={() => {
-              askRevision(o.id, note.trim())
-              toast('Revision sent to your editor')
-              onClose()
+            onClick={async () => {
+              if (await act(() => askRevision(o.id, note.trim()).then(() => true), 'Revision sent to your editor')) onClose()
             }}
           >
             Ask for a revision
@@ -460,6 +458,9 @@ function Wallet({ s, me, balance }) {
           ))}
         </div>
       </div>
+      {isLive() && (
+        <div className="notice">Online payments open soon. Until then, message QuiCut on WhatsApp and we add your credits the same day.</div>
+      )}
       {PACKS_ARE_PLACEHOLDER && <p className="muted small">Sample packs. Final packs and prices coming soon.</p>}
       <p className="muted small">QuiCut Pro renews every month. In demo mode it is charged once.</p>
       <div className="pack-grid">
@@ -567,10 +568,7 @@ function Profile({ s, me, orders }) {
           ) : (
             <button
               className="btn btn-ghost btn-sm"
-              onClick={() => {
-                requestDeletion(me.id)
-                toast('Deletion requested. Our team will confirm on WhatsApp.')
-              }}
+              onClick={() => act(() => requestDeletion(me.id), 'Deletion requested. Our team will confirm on WhatsApp.')}
             >
               Request deletion
             </button>
