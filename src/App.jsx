@@ -517,10 +517,12 @@ function Join() {
     try {
       const res = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ ...payload, _subject: `QuiCut waitlist: ${payload.name} (${role})`, _template: 'table' }),
       })
       if (!res.ok) throw new Error(String(res.status))
+      const data = await res.json().catch(() => ({}))
+      if (data.success === 'false' || data.success === false) throw new Error(data.message || 'rejected')
       setStatus({ kind: 'done', name: form.name.trim() })
     } catch {
       setStatus({ kind: 'error', msg: 'That did not go through. Check your connection and try again.' })
