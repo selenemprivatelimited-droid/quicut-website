@@ -1,10 +1,7 @@
+// Admin sections (used by the private admin app in src/admin/).
 import { useState } from 'react'
 import { EDIT_TYPES, ADDONS, CREDIT_PACKS, PACKS_ARE_PLACEHOLDER, PAYOUTS, packTotal, packPrice, editType } from '../config/pricing.js'
-import { MODE } from '../services/payments.js'
-import { KYC_MODE } from '../services/kyc.js'
 import {
-  platformStats,
-  alerts,
   creditBalance,
   editorMoney,
   assignEditor,
@@ -15,55 +12,14 @@ import {
   setEditorStatus,
   completeDeletion,
 } from '../services/store.js'
-import { Tabs, Pill, Empty, Stat, Credits, toast, inr, qc, ago, dueIn } from '../ui.jsx'
+import { Pill, Empty, Credits, toast, inr, qc, ago, dueIn } from '../ui.jsx'
 import { aiOps, aiChat, opsSnapshot } from '../services/ai.js'
 import { AiCard } from './Copilot.jsx'
-
-export default function Admin({ s }) {
-  const [tab, setTab] = useState('overview')
-  const kycQueue = [...s.creators.map((p) => ({ ...p, role: 'creator' })), ...s.editors.map((p) => ({ ...p, role: 'editor' }))].filter(
-    (p) => p.kyc?.status === 'pending'
-  )
-  const payoutsDue = s.payouts.filter((p) => p.status === 'requested')
-  const al = alerts(s)
-  return (
-    <div className="role-view wide">
-      <div className="view-head">
-        <div>
-          <p className="kicker">// admin panel</p>
-          <h1>QuiCut operations</h1>
-        </div>
-        <div className="mode-tags">
-          <span className="pill pill-muted">Payments: {MODE}</span>
-          <span className="pill pill-muted">KYC: {KYC_MODE}</span>
-        </div>
-      </div>
-      <Tabs
-        value={tab}
-        onChange={setTab}
-        tabs={[
-          { id: 'overview', label: 'Overview', count: al.length },
-          { id: 'orders', label: 'Orders' },
-          { id: 'kyc', label: 'KYC', count: kycQueue.length },
-          { id: 'payouts', label: 'Payouts', count: payoutsDue.length },
-          { id: 'people', label: 'People' },
-          { id: 'pricing', label: 'Pricing' },
-        ]}
-      />
-      {tab === 'overview' && <Overview s={s} al={al} go={setTab} />}
-      {tab === 'orders' && <Orders s={s} />}
-      {tab === 'kyc' && <Kyc s={s} queue={kycQueue} />}
-      {tab === 'payouts' && <Payouts s={s} />}
-      {tab === 'people' && <People s={s} />}
-      {tab === 'pricing' && <Pricing />}
-    </div>
-  )
-}
 
 const LEVEL = { urgent: 'alert-bad', soon: 'alert-warn', fyi: 'alert-info' }
 const tabFor = (t) => (/kyc|verif/i.test(t) ? 'kyc' : /payout|upi/i.test(t) ? 'payouts' : /QC-\d+|order|deadline|late|unassigned/i.test(t) ? 'orders' : 'people')
 
-function OpsBrief({ s, go }) {
+export function OpsBrief({ s, go }) {
   const [brief, setBrief] = useState(null)
   const [busy, setBusy] = useState(false)
   const [q, setQ] = useState('')
@@ -124,42 +80,7 @@ function OpsBrief({ s, go }) {
   )
 }
 
-function Overview({ s, al, go }) {
-  const k = platformStats(s)
-  return (
-    <div className="stack">
-      <OpsBrief s={s} go={go} />
-      <div className="stat-grid">
-        <Stat label="Cash collected" value={inr(k.cashInInr)} sub={k.cashInUsd ? `+ $${k.cashInUsd.toFixed(2)} via Stripe` : 'Razorpay · INR'} tone="green" />
-        <Stat label="Delivered GMV" value={inr(k.gmv)} sub={`${k.done} orders delivered`} />
-        <Stat label="QuiCut revenue" value={inr(k.revenue)} sub="GMV minus editor pay" tone="red" />
-        <Stat label="Unspent credits" value={qc(k.liability)} sub="Owed to creators as edits" />
-        <Stat label="Payouts due" value={inr(k.payoutsDue)} sub={PAYOUTS.schedule} tone="amber" />
-        <Stat label="Orders" value={`${k.open} / ${k.active}`} sub="waiting / in progress" />
-      </div>
-      <h3 className="section-title">Alerts</h3>
-      {al.length ? (
-        <div className="list">
-          {al.map((a, i) => (
-            <div key={i} className={`alert alert-${a.level}`}>
-              <div>
-                <div className="row-title">{a.text}</div>
-                <div className="row-meta">{a.action}</div>
-              </div>
-              <button className="btn btn-ghost btn-sm" onClick={() => go(a.kind === 'kyc' ? 'kyc' : a.orderId ? 'orders' : 'people')}>
-                Open
-              </button>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <Empty title="All clear">No deadline, rating or KYC alerts right now.</Empty>
-      )}
-    </div>
-  )
-}
-
-function Orders({ s }) {
+export function Orders({ s }) {
   const [filter, setFilter] = useState('all')
   const list = s.orders.filter((o) =>
     filter === 'all' ? true : filter === 'active' ? ['editing', 'review', 'revision'].includes(o.status) : o.status === filter
@@ -264,7 +185,7 @@ function Orders({ s }) {
   )
 }
 
-function Kyc({ s, queue }) {
+export function Kyc({ s, queue }) {
   const [notes, setNotes] = useState({})
   const reviewed = [...s.creators.map((p) => ({ ...p, role: 'creator' })), ...s.editors.map((p) => ({ ...p, role: 'editor' }))].filter((p) =>
     ['verified', 'rejected'].includes(p.kyc?.status)
@@ -343,7 +264,7 @@ function Kyc({ s, queue }) {
   )
 }
 
-function Payouts({ s }) {
+export function Payouts({ s }) {
   const [busy, setBusy] = useState(null)
   const due = s.payouts.filter((p) => p.status === 'requested')
   const paid = s.payouts.filter((p) => p.status === 'paid')
@@ -432,7 +353,7 @@ function Payouts({ s }) {
   )
 }
 
-function People({ s }) {
+export function People({ s }) {
   const [grant, setGrant] = useState({})
   const reqs = s.deletions.filter((d) => d.status === 'requested')
   return (
@@ -567,7 +488,7 @@ function KycPill({ p }) {
   return <Pill status={tone}>{label}</Pill>
 }
 
-function Pricing() {
+export function Pricing() {
   return (
     <div className="stack">
       <p className="muted">
