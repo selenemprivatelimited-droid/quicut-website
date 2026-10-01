@@ -11,8 +11,9 @@ import {
   grantCredits,
   setEditorStatus,
   completeDeletion,
+  isLive,
 } from '../services/store.js'
-import { Pill, Empty, Credits, toast, inr, qc, ago, dueIn } from '../ui.jsx'
+import { Pill, Empty, Credits, act, inr, qc, ago, dueIn } from '../ui.jsx'
 import { aiOps, aiChat, opsSnapshot } from '../services/ai.js'
 import { AiCard } from './Copilot.jsx'
 
@@ -140,10 +141,7 @@ export function Orders({ s }) {
                       <select
                         aria-label={`Editor for ${o.id}`}
                         value={o.editorId || ''}
-                        onChange={(e) => {
-                          assignEditor(o.id, e.target.value)
-                          toast(`${o.id} assigned`)
-                        }}
+                        onChange={(e) => act(() => assignEditor(o.id, e.target.value), `${o.id} assigned`)}
                       >
                         <option value="" disabled>
                           Assign…
@@ -165,10 +163,7 @@ export function Orders({ s }) {
                     {!['completed', 'refunded'].includes(o.status) && (
                       <button
                         className="btn btn-ghost btn-sm"
-                        onClick={() => {
-                          refundOrder(o.id, 'Admin refund')
-                          toast(`${qc(o.credits)} credits refunded`)
-                        }}
+                        onClick={() => act(() => refundOrder(o.id, 'Admin refund'), `${qc(o.credits)} credits refunded`)}
                       >
                         Refund
                       </button>
@@ -216,20 +211,14 @@ export function Kyc({ s, queue }) {
               <div className="btn-row">
                 <button
                   className="btn btn-green btn-sm"
-                  onClick={() => {
-                    reviewKyc(p.role, p.id, true)
-                    toast(`${p.name} verified`)
-                  }}
+                  onClick={() => act(() => reviewKyc(p.role, p.id, true), `${p.name} verified`)}
                 >
                   Approve
                 </button>
                 <button
                   className="btn btn-ghost btn-sm"
                   disabled={!notes[p.id]}
-                  onClick={() => {
-                    reviewKyc(p.role, p.id, false, notes[p.id])
-                    toast(`${p.name} rejected`)
-                  }}
+                  onClick={() => act(() => reviewKyc(p.role, p.id, false, notes[p.id]), `${p.name} rejected`)}
                 >
                   Reject
                 </button>
@@ -266,19 +255,15 @@ export function Kyc({ s, queue }) {
 
 export function Payouts({ s }) {
   const [busy, setBusy] = useState(null)
+  const [refs, setRefs] = useState({})
+  const live = isLive()
   const due = s.payouts.filter((p) => p.status === 'requested')
   const paid = s.payouts.filter((p) => p.status === 'paid')
   const ed = (id) => s.editors.find((e) => e.id === id)
   const pay = async (p) => {
     setBusy(p.id)
-    try {
-      await payPayout(p.id)
-      toast(`${inr(p.inr)} sent to ${ed(p.editorId).upi}`)
-    } catch (e) {
-      toast(e.message, 'bad')
-    } finally {
-      setBusy(null)
-    }
+    await act(() => payPayout(p.id, refs[p.id]), live ? `${inr(p.inr)} marked paid` : `${inr(p.inr)} sent to ${ed(p.editorId).upi}`)
+    setBusy(null)
   }
   return (
     <div className="stack">
@@ -295,8 +280,17 @@ export function Payouts({ s }) {
               </div>
               <div className="row-side">
                 <b className="mono">{inr(p.inr)}</b>
-                <button className="btn btn-green btn-sm" disabled={busy === p.id} onClick={() => pay(p)}>
-                  {busy === p.id ? 'Sending…' : `Pay via ${PAYOUTS.method}`}
+                {live && (
+                  <input
+                    className="small-input"
+                    aria-label={`UPI reference for ${ed(p.editorId).name}`}
+                    placeholder="UPI ref no."
+                    value={refs[p.id] || ''}
+                    onChange={(e) => setRefs((r) => ({ ...r, [p.id]: e.target.value }))}
+                  />
+                )}
+                <button className="btn btn-green btn-sm" disabled={busy === p.id || (live && !(refs[p.id] || '').trim())} onClick={() => pay(p)}>
+                  {busy === p.id ? 'Saving…' : live ? 'Mark paid' : `Pay via ${PAYOUTS.method}`}
                 </button>
               </div>
             </div>
@@ -363,7 +357,7 @@ export function People({ s }) {
           <h3 className="section-title">Account deletion requests</h3>
           <div className="list">
             {reqs.map((d) => {
-              const c = s.creators.find((x) => x.id === d.userId)
+              const c = [...s.creators, ...s.editors].find((x) => x.id === d.userId) || { name: 'A user' }
               return (
                 <div key={d.id} className="alert alert-warn">
                   <div>
@@ -372,10 +366,7 @@ export function People({ s }) {
                   </div>
                   <button
                     className="btn btn-ghost btn-sm"
-                    onClick={() => {
-                      completeDeletion(d.id)
-                      toast('Account deleted and logged')
-                    }}
+                    onClick={() => act(() => completeDeletion(d.id), 'Account deleted and logged')}
                   >
                     Mark deleted
                   </button>
@@ -424,10 +415,9 @@ export function People({ s }) {
                     <button
                       className="btn btn-ghost btn-sm"
                       disabled={!grant[c.id] || c.deleted}
-                      onClick={() => {
-                        grantCredits(c.id, Number(grant[c.id]), 'Goodwill credits (SOP: late delivery)')
-                        toast(`${grant[c.id]} credits given to ${c.name}`)
-                        setGrant((g) => ({ ...g, [c.id]: '' }))
+                      onClick={async () => {
+                        const n = Number(grant[c.id])
+                        if (await act(() => grantCredits(c.id, n, 'Credits from QuiCut').then(() => true), `${n} credits given to ${c.name}`)) setGrant((g) => ({ ...g, [c.id]: '' }))
                       }}
                     >
                       Give
@@ -466,7 +456,7 @@ export function People({ s }) {
                 <td>
                   <button
                     className="btn btn-ghost btn-sm"
-                    onClick={() => setEditorStatus(e.id, e.status === 'active' ? 'paused' : 'active')}
+                    onClick={() => act(() => setEditorStatus(e.id, e.status === 'active' ? 'paused' : 'active'))}
                     aria-label={`${e.status === 'active' ? 'Pause' : 'Activate'} ${e.name}`}
                   >
                     <Pill status={e.status} /> {e.status === 'active' ? 'Pause' : 'Activate'}
