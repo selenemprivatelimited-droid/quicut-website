@@ -8,6 +8,8 @@
 //   POST /v1/reply    { note, order, tone }  -> drafts an editor's reply to a creator
 //   POST /v1/ops      { snapshot }           -> admin ops brief from a data snapshot
 //   POST /v1/chat     { role, messages, context } -> role-aware assistant (creator / editor / admin)
+//   POST /v1/analyst-plan    { question, schema, today } -> data analyst: question -> structured query
+//   POST /v1/analyst-explain { question, query, rows }   -> data analyst: result -> answer + follow-ups
 
 const MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast'
 const FALLBACK_MODEL = '@cf/meta/llama-3.1-8b-instruct-fp8'
@@ -179,7 +181,46 @@ Context: ${ctx}`
   return { reply: text.trim() }
 }
 
-const ROUTES = { brief, explain, reply, ops, chat }
+// ---------- data analyst agent (admin) ----------
+// Plan: question -> a structured query over the admin's tables (never code, so it is safe to run).
+// Explain: the query result -> a short answer with numbers and follow-up questions.
+async function analystPlan(env, body) {
+  const question = clip(body.question, 600)
+  if (!question.trim()) return { error: 'Ask a question first.' }
+  const schema = clip(JSON.stringify(body.schema || {}), 6000)
+  const sys = `You are QuiCut's data analyst agent. QuiCut is an Indian video-editing marketplace (creators buy credits, editors are paid per video, QuiCut keeps 20%).
+Turn the admin's question into ONE query over these tables. Today is ${clip(body.today, 20)}. Amounts are in Indian rupees.
+Tables (column: type, with example values):
+${schema}
+Return ONLY JSON:
+{"thinking": "one sentence on how you will answer",
+ "query": {"table": "<table>",
+   "filters": [{"column": "<col>", "op": "=|!=|>|<|>=|<=|contains|in|last_days", "value": <value>}],
+   "group_by": "<col or null>",
+   "time_bucket": "day|week|month|null (only when group_by is date)",
+   "metrics": [{"agg": "count|sum|avg|min|max|count_distinct", "column": "<col or * for count>", "as": "<short_name>"}],
+   "sort_by": "<metric name or group column>", "sort_dir": "asc|desc", "limit": <1-100>},
+ "chart": "line (trends over dates) | bar (compare categories) | number (one value) | table",
+ "title": "short chart title"}
+Rules: use only listed tables and columns. For "last N days/this week/this month" use a filter {"column":"date","op":"last_days","value":N}.
+Revenue means quicut_revenue_inr. Money in means payments.amount_inr. Editor cost means editor_pay_inr.
+For trends, group_by "date" with a time_bucket and sort_by "date" asc.${body.error ? '\nYour previous query failed with: ' + clip(body.error, 300) + '. Fix it.' : ''}`
+  const j = parseJson(await run(env, [{ role: 'system', content: sys }, { role: 'user', content: question }], { maxTokens: 500, jsonMode: true }))
+  return j && j.query ? j : { error: 'The analyst could not plan that question. Try rephrasing it.' }
+}
+
+async function analystExplain(env, body) {
+  const sys = `You are QuiCut's data analyst. Answer the admin's question from the query result only. Amounts are Indian rupees (write Rs or the ₹ sign).
+Be specific with numbers, names and dates. If the result is empty, say so plainly.
+Return ONLY JSON: {"answer": "2 to 3 sentences", "highlights": ["short fact", ...] (0 to 3), "followups": ["next question", ...] (exactly 3, answerable from the same tables)}`
+  const user = `Question: ${clip(body.question, 600)}
+Query: ${clip(JSON.stringify(body.query || {}), 1500)}
+Result (${Number(body.total) || 0} rows, first ${(body.rows || []).length} shown): ${clip(JSON.stringify(body.rows || []), 6000)}`
+  const j = parseJson(await run(env, [{ role: 'system', content: sys }, { role: 'user', content: user }], { maxTokens: 450, jsonMode: true }))
+  return j || { error: 'The analyst could not explain the result. Try again.' }
+}
+
+const ROUTES = { brief, explain, reply, ops, chat, 'analyst-plan': analystPlan, 'analyst-explain': analystExplain }
 
 export default {
   async fetch(req, env) {
