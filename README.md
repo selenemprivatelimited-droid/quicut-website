@@ -38,6 +38,17 @@ Runs in demo mode (data in the browser). Prices and credit packs: `src/app/confi
 Payments (Razorpay for India, Stripe with Apple Pay / Google Pay for global): `src/app/services/payments.js`.
 KYC: `src/app/services/kyc.js`.
 
+### QuiCut AI
+
+- **Creator:** AI brief agent (reads Telugu / Hindi / English briefs, writes the editor checklist, suggests tier and add-ons), voice input, and an assistant chat.
+- **Editor:** "Explain this job" plan with tick-off steps and progress, the creator's AI checklist, order messages with an AI reply drafter.
+- **Admin:** AI ops brief (follows the SOPs, items open the right tab) and "Ask your data".
+- Every role has the floating **Ask QuiCut AI** assistant.
+
+The AI runs on a Cloudflare Worker with Workers AI (Llama 3.3 70B) at `https://api.quicutapp.com`
+(source: `workers/ai/worker.js`, no API keys). The app calls it through `src/app/services/ai.js`;
+if it can't be reached, every feature falls back to built-in rules.
+
 ## Edit content
 
 All copy, prices and numbers are in `src/content.js`. Prices follow the Final Pricing Model v2.0.
@@ -70,7 +81,8 @@ src/
   scene/geometry.js  Q / blade shapes, film-strip + glow textures
   Logo.jsx           QuiCut wordmark as inline SVG
   intro/             animated intro (canvas) shared by site and app
-  app/               web app: views, services (store, payments, KYC), pricing config
+  app/               web app: views, services (store, payments, KYC, AI), pricing config
+workers/ai/          Cloudflare Worker behind api.quicutapp.com (Workers AI)
 public/              favicon.svg
 scripts/build-preview.mjs   no-install single-page preview build (bun + jsDelivr import map)
 ```

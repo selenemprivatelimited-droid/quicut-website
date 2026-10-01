@@ -7,6 +7,7 @@ import Creator from './views/Creator.jsx'
 import Editor from './views/Editor.jsx'
 import Admin from './views/Admin.jsx'
 import IntroSplash from '../intro/IntroSplash.jsx'
+import Copilot from './views/Copilot.jsx'
 
 const ROLES = [
   { id: 'creator', label: 'Creator' },
@@ -90,6 +91,7 @@ export default function App() {
         {role === 'editor' && <Editor s={s} editorId={editorId} />}
         {role === 'admin' && <Admin s={s} />}
       </main>
+      <Copilot role={role} s={s} ids={{ creatorId, editorId }} />
       <Toaster />
     </div>
   )
