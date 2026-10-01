@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { KYC_STEPS, DOC_TYPES, checkFields } from '../services/kyc.js'
-import { startKyc } from '../services/store.js'
+import { startKyc, isLive } from '../services/store.js'
 import { Sheet, toast, ago } from '../ui.jsx'
 
 const COPY = {
@@ -63,10 +63,11 @@ function KycSheet({ role, person, onClose }) {
   const [busy, setBusy] = useState(false)
   const up = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }))
   const docs = DOC_TYPES[role === 'editor' ? 'IN' : f.region]
+  const live = isLive()
 
   const submit = async (e) => {
     e.preventDefault()
-    const problem = checkFields(role, f)
+    const problem = checkFields(role, live ? { ...f, selfie: 'reviewed-by-team' } : f)
     if (problem) return setErr(problem)
     setErr('')
     setBusy(true)
@@ -127,10 +128,12 @@ function KycSheet({ role, person, onClose }) {
             </div>
           </>
         )}
-        <div className="field span-2">
-          <label htmlFor="k-selfie">Selfie for the face match</label>
-          <input id="k-selfie" type="file" accept="image/*" capture="user" onChange={(e) => setF((x) => ({ ...x, selfie: e.target.files[0] || null }))} />
-        </div>
+        {!live && (
+          <div className="field span-2">
+            <label htmlFor="k-selfie">Selfie for the face match</label>
+            <input id="k-selfie" type="file" accept="image/*" capture="user" onChange={(e) => setF((x) => ({ ...x, selfie: e.target.files[0] || null }))} />
+          </div>
+        )}
         {role === 'editor' && (
           <label className="check span-2" htmlFor="k-nda">
             <input id="k-nda" type="checkbox" checked={f.nda} onChange={up('nda')} />
@@ -146,8 +149,9 @@ function KycSheet({ role, person, onClose }) {
           {busy ? 'Submitting…' : 'Submit for verification'}
         </button>
         <p className="muted small span-2">
-          Your documents go to our verification partner. QuiCut keeps only the last 4 characters of your ID numbers. Demo
-          mode: nothing leaves this browser.
+          {live
+            ? 'QuiCut keeps only the last 4 characters of your ID numbers. Our team reviews your details within a few hours and may ask for a short video call to match your face.'
+            : 'Your documents go to our verification partner. QuiCut keeps only the last 4 characters of your ID numbers. Demo mode: nothing leaves this browser.'}
         </p>
       </form>
     </Sheet>

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { sendMessage } from '../services/store.js'
 import { aiReply } from '../services/ai.js'
-import { ago, dueIn, toast } from '../ui.jsx'
+import { ago, dueIn, toast, act } from '../ui.jsx'
 import { VoiceButton } from './Copilot.jsx'
 
 /** Chat between the creator and the editor on one order. Editors get an AI reply drafter. */
@@ -14,11 +14,12 @@ export default function OrderThread({ s, o, as }) {
   const other = as === 'creator' ? editor?.name?.split(' ')[0] || 'your editor' : creator?.name?.split(' ')[0] || 'the creator'
   const canChat = !!o.editorId && !['refunded'].includes(o.status)
 
-  const send = () => {
+  const send = async () => {
     const t = text.trim()
     if (!t) return
-    sendMessage(o.id, as, t)
     setText('')
+    const ok = await act(() => sendMessage(o.id, as, t).then(() => true))
+    if (!ok) setText(t)
   }
 
   const draft = async () => {
