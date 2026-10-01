@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { EDIT_TYPES, ADDONS, PAYOUTS, editType, addon } from '../config/pricing.js'
-import { editorMoney, acceptJob, deliverJob, requestPayout, isVerified } from '../services/store.js'
+import { editorMoney, acceptJob, deliverJob, requestPayout, isVerified, toggleStep } from '../services/store.js'
+import { aiExplain } from '../services/ai.js'
+import { AiCard } from './Copilot.jsx'
+import OrderThread from './OrderThread.jsx'
 import { KycBanner } from './Kyc.jsx'
 import { OrderRow } from './Creator.jsx'
 import { Tabs, Pill, Empty, Sheet, Stat, toast, inr, ago, dueIn } from '../ui.jsx'
@@ -52,7 +55,15 @@ export default function Editor({ s, editorId }) {
 
 function JobSheet({ s, o, me, onClose, mode }) {
   const [url, setUrl] = useState(o.deliveryUrl || '')
+  const [plan, setPlan] = useState(null)
+  const [busy, setBusy] = useState(false)
   const creator = s.creators.find((c) => c.id === o.creatorId)
+  const canTick = mode === 'deliver'
+  const explain = async () => {
+    setBusy(true)
+    setPlan(await aiExplain(o, creator, dueIn(o.dueAt)))
+    setBusy(false)
+  }
   return (
     <Sheet title={o.title} onClose={onClose}>
       <div className="pay-banner">
@@ -77,14 +88,39 @@ function JobSheet({ s, o, me, onClose, mode }) {
         <dd className="mono small">{o.footage} · signed link, 2 h expiry</dd>
       </dl>
       <div className="ai-brief">
-        <span className="ai-tag">✦ Claude AI brief</span>
+        <span className="ai-tag">Creator's brief</span>
         <p>{o.brief || 'No brief written. Follow the tier defaults.'}</p>
         {o.status === 'revision' && o.revisionNote && (
           <p className="amber">
             <b>Revision:</b> {o.revisionNote}
           </p>
         )}
+        <div className="ai-row">
+          <button type="button" className="btn btn-ai btn-sm" onClick={explain} disabled={busy}>
+            {busy ? 'Reading the job…' : plan ? '✦ Explain again' : '✦ Explain this job'}
+          </button>
+          <span className="muted small">Plain-English steps, translated from the creator's language.</span>
+        </div>
       </div>
+      {plan && (
+        <AiCard title="Job plan" source={plan.source} onClose={() => setPlan(null)}>
+          {plan.english && plan.english !== o.brief && <p>{plan.english}</p>}
+          <Steps o={o} items={plan.steps} prefix="p" canTick={canTick} />
+          {plan.watchOut.length > 0 && (
+            <div className="ai-questions">
+              <span className="label">Watch out</span>
+              {plan.watchOut.map((w, i) => (
+                <p key={i} className="small">! {w}</p>
+              ))}
+            </div>
+          )}
+        </AiCard>
+      )}
+      {o.checklist?.checklist?.length > 0 && (
+        <AiCard title="Creator's AI checklist" source={o.checklist.source}>
+          <Steps o={o} items={o.checklist.checklist.map((c) => c.item + (c.detail && c.detail !== c.item ? ` · ${c.detail}` : ''))} prefix="c" canTick={canTick} />
+        </AiCard>
+      )}
       {mode === 'accept' && (
         <button
           className="btn btn-green btn-block"
@@ -121,10 +157,41 @@ function JobSheet({ s, o, me, onClose, mode }) {
           </button>
         </div>
       )}
+      {mode !== 'accept' && <OrderThread s={s} o={o} as="editor" />}
       <div className="nda">
         <b>NDA active.</b> Creator footage is confidential. Do not share or reuse it outside this order.
       </div>
     </Sheet>
+  )
+}
+
+function Steps({ o, items, prefix, canTick }) {
+  const done = o.done || {}
+  const n = items.filter((_, i) => done[`${prefix}${i}`]).length
+  return (
+    <div className="steps">
+      {canTick && items.length > 0 && (
+        <div className="progress" aria-label={`${n} of ${items.length} done`}>
+          <span style={{ width: `${(n / items.length) * 100}%` }} />
+        </div>
+      )}
+      <ul className="ai-check ticks">
+        {items.map((it, i) => {
+          const k = `${prefix}${i}`
+          return (
+            <li key={k} className={done[k] ? 'is-done' : ''}>
+              {canTick ? (
+                <label>
+                  <input type="checkbox" checked={!!done[k]} onChange={() => toggleStep(o.id, k)} /> {it}
+                </label>
+              ) : (
+                it
+              )}
+            </li>
+          )
+        })}
+      </ul>
+    </div>
   )
 }
 
