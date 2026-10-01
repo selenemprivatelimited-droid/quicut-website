@@ -15,6 +15,7 @@ import { quote, packTotal, editType, PAYOUTS, INR_PER_CREDIT, REGIONS } from '..
 import { chargeForPack, sendPayout } from './payments.js'
 import { submitKyc, maskId } from './kyc.js'
 import { addHistory } from './history.js'
+import * as live from './live.js'
 
 const KEY = 'quicut-app-v3'
 const listeners = new Set()
@@ -112,7 +113,81 @@ export function useStore() {
   )
 }
 export const getState = () => state
-export const resetDemo = () => set((d) => Object.assign(d, seed()))
+export const resetDemo = () => (liveOn ? refreshLive() : set((d) => Object.assign(d, seed())))
+
+// ── Live mode (real accounts on Supabase) ──
+// Signed-in people see their real data; everyone else gets the demo above.
+let liveOn = false
+let poll = null
+export const isLive = () => liveOn
+let account = { status: 'demo' }
+const accountListeners = new Set()
+function setAccount(a) {
+  account = a
+  accountListeners.forEach((l) => l())
+}
+export function useAccount() {
+  return useSyncExternalStore(
+    (l) => (accountListeners.add(l), () => accountListeners.delete(l)),
+    () => account
+  )
+}
+
+export async function refreshLive() {
+  const next = await live.fetchState()
+  liveOn = true
+  state = next
+  listeners.forEach((l) => l())
+}
+
+function startPolling() {
+  clearInterval(poll)
+  poll = setInterval(() => {
+    if (document.visibilityState === 'visible') refreshLive().catch(() => {})
+  }, 20000)
+}
+
+/** On app load: pick up a sign-in link, then switch to live mode if the person has an account. */
+export async function initAccount() {
+  try {
+    setAccount({ status: 'loading' })
+    const who = await live.whoAmI()
+    if (!who) return setAccount({ status: 'demo' })
+    if (!who.profile) return setAccount({ status: 'onboard', uid: who.uid, email: who.email })
+    await refreshLive()
+    startPolling()
+    setAccount({ status: 'live', uid: who.uid, email: who.email, role: who.profile.role })
+  } catch (e) {
+    setAccount({ status: 'demo', error: e.message })
+  }
+}
+
+/** Admin panel: signed-in admins load everything row-level security lets them read. */
+export async function enterAdminLive() {
+  await refreshLive()
+  startPolling()
+}
+
+export async function finishOnboarding(fields) {
+  await live.createProfile(account.uid, fields)
+  await initAccount()
+}
+
+export async function signOutAccount() {
+  clearInterval(poll)
+  await live.signOut()
+  liveOn = false
+  state = load()
+  listeners.forEach((l) => l())
+  setAccount({ status: 'demo' })
+}
+
+const dbId = (code) => state.orders.find((o) => o.id === code)?.dbId
+async function liveDo(promise) {
+  const out = await promise
+  await refreshLive()
+  return out
+}
 
 const person = (d, role, id) => (role === 'creator' ? d.creators : d.editors).find((p) => p.id === id)
 export const isVerified = (p) => p?.kyc?.status === 'verified'
@@ -178,6 +253,7 @@ export function alerts(s) {
 
 // ── KYC ──
 export async function startKyc(role, id, fields) {
+  if (liveOn) return liveDo(live.submitKyc(fields))
   const res = await submitKyc(role, fields)
   if (!res.ok) throw new Error('Verification could not start. Try again.')
   set((d) => {
@@ -196,8 +272,8 @@ export async function startKyc(role, id, fields) {
   })
 }
 
-export const reviewKyc = (role, id, approve, note = '') =>
-  set((d) => {
+export const reviewKyc = async (role, id, approve, note = '') =>
+  liveOn ? liveDo(live.adminReviewKyc(id, approve, note)) : set((d) => {
     const p = person(d, role, id)
     Object.assign(p.kyc, { status: approve ? 'verified' : 'rejected', reviewedAt: now(), note })
     if (approve && role === 'editor' && p.kyc.upi) p.upi = p.kyc.upi
@@ -206,6 +282,7 @@ export const reviewKyc = (role, id, approve, note = '') =>
 // ── Creator actions ──
 export async function buyPack(creator, pack, region, method) {
   if (!isVerified(creator)) throw new Error('Complete KYC before buying credits.')
+  if (liveOn) throw new Error('Online payments open soon. Message QuiCut on WhatsApp and we will add your credits.')
   const pay = await chargeForPack(pack, creator, region, method)
   if (!pay.ok) throw new Error('Payment did not complete')
   const isIn = REGIONS[region].currency === 'INR'
@@ -227,7 +304,8 @@ export async function buyPack(creator, pack, region, method) {
   return pay
 }
 
-export function placeOrder({ creatorId, typeId, addons, title, brief, footage, checklist }) {
+export async function placeOrder({ creatorId, typeId, addons, title, brief, footage, checklist }) {
+  if (liveOn) return liveDo(live.placeOrder({ typeId, addons, title, brief, footage, checklist }))
   const c = state.creators.find((x) => x.id === creatorId)
   if (!isVerified(c)) throw new Error('Complete KYC before placing an order.')
   const q = quote(typeId, addons)
@@ -265,8 +343,8 @@ function move(d, orderId, status, patch = {}) {
   return o
 }
 
-export const approveDelivery = (orderId, stars = 5) =>
-  set((d) => {
+export const approveDelivery = async (orderId, stars = 5) =>
+  liveOn ? liveDo(live.approveDelivery(dbId(orderId), stars)) : set((d) => {
     const o = move(d, orderId, 'completed', { stars, doneAt: now() })
     d.earnings.push({ id: nextId('E'), editorId: o.editorId, orderId, inr: o.editorPayInr, at: now() })
     const e = d.editors.find((x) => x.id === o.editorId)
@@ -274,40 +352,43 @@ export const approveDelivery = (orderId, stars = 5) =>
     e.ratings += 1
   })
 
-export const askRevision = (orderId, note) =>
-  set((d) => {
+export const askRevision = async (orderId, note) =>
+  liveOn ? liveDo(live.askRevision(dbId(orderId), note)) : set((d) => {
     const o = move(d, orderId, 'revision', { revisionNote: note })
     o.revisions += 1
   })
 
-export const requestDeletion = (creatorId) =>
-  set((d) => {
+export const requestDeletion = async (creatorId) =>
+  liveOn ? liveDo(live.requestDeletion()) : set((d) => {
     if (!d.deletions.some((x) => x.userId === creatorId && x.status === 'requested'))
       d.deletions.unshift({ id: nextId('D'), role: 'creator', userId: creatorId, status: 'requested', at: now() })
   })
 
 // ── Shared: order messages + editor checklist ──
-export const sendMessage = (orderId, from, text) =>
-  set((d) => {
+export const sendMessage = async (orderId, from, text) =>
+  liveOn ? liveDo(live.sendMessage(dbId(orderId), text)) : set((d) => {
     const o = d.orders.find((x) => x.id === orderId)
     o.messages = [...(o.messages || []), { from, text: String(text).slice(0, 1000), at: now() }]
   })
 
-export const toggleStep = (orderId, key) =>
-  set((d) => {
+export const toggleStep = async (orderId, key) =>
+  liveOn ? liveDo(live.toggleStep(dbId(orderId), key)) : set((d) => {
     const o = d.orders.find((x) => x.id === orderId)
     o.done = { ...(o.done || {}), [key]: !(o.done || {})[key] }
   })
 
 // ── Editor actions ──
-export function acceptJob(orderId, editorId) {
+export async function acceptJob(orderId, editorId) {
+  if (liveOn) return liveDo(live.acceptJob(dbId(orderId)))
   const e = state.editors.find((x) => x.id === editorId)
   if (!isVerified(e)) throw new Error('Your KYC must be approved before you take jobs.')
   set((d) => move(d, orderId, 'editing', { editorId }))
 }
-export const deliverJob = (orderId, url) => set((d) => move(d, orderId, 'review', { deliveryUrl: url }))
+export const deliverJob = async (orderId, url) =>
+  liveOn ? liveDo(live.deliverJob(dbId(orderId), url)) : set((d) => move(d, orderId, 'review', { deliveryUrl: url }))
 
-export function requestPayout(editorId) {
+export async function requestPayout(editorId) {
+  if (liveOn) return liveDo(live.requestPayout())
   const e = state.editors.find((x) => x.id === editorId)
   if (!isVerified(e)) throw new Error('Complete KYC to receive payouts.')
   const m = editorMoney(state, editorId)
@@ -316,18 +397,20 @@ export function requestPayout(editorId) {
 }
 
 // ── Admin actions ──
-export const assignEditor = (orderId, editorId) => set((d) => move(d, orderId, 'editing', { editorId }))
+export const assignEditor = async (orderId, editorId) =>
+  liveOn ? liveDo(live.adminAssign(dbId(orderId), editorId)) : set((d) => move(d, orderId, 'editing', { editorId }))
 
-export const refundOrder = (orderId, reason) =>
-  set((d) => {
+export const refundOrder = async (orderId, reason) =>
+  liveOn ? liveDo(live.adminRefund(dbId(orderId), reason)) : set((d) => {
     const o = move(d, orderId, 'refunded', { refundReason: reason })
     d.ledger.push({ id: nextId('L'), creatorId: o.creatorId, type: 'refund', credits: o.credits, note: `${orderId} refund`, at: now() })
   })
 
-export const grantCredits = (creatorId, credits, note) =>
-  set((d) => d.ledger.push({ id: nextId('L'), creatorId, type: 'bonus', credits, note: note || 'Bonus from QuiCut', at: now() }))
+export const grantCredits = async (creatorId, credits, note) =>
+  liveOn ? liveDo(live.adminGrant(creatorId, credits, note)) : set((d) => d.ledger.push({ id: nextId('L'), creatorId, type: 'bonus', credits, note: note || 'Bonus from QuiCut', at: now() }))
 
-export async function payPayout(payoutId) {
+export async function payPayout(payoutId, reference) {
+  if (liveOn) return liveDo(live.adminPayPayout(payoutId, reference))
   const p = state.payouts.find((x) => x.id === payoutId)
   const editor = state.editors.find((e) => e.id === p.editorId)
   const res = await sendPayout(p, editor)
@@ -335,11 +418,11 @@ export async function payPayout(payoutId) {
   set((d) => Object.assign(d.payouts.find((x) => x.id === payoutId), { status: 'paid', paidAt: now(), reference: res.reference }))
 }
 
-export const setEditorStatus = (editorId, status) =>
-  set((d) => Object.assign(d.editors.find((e) => e.id === editorId), { status }))
+export const setEditorStatus = async (editorId, status) =>
+  liveOn ? liveDo(live.adminEditorStatus(editorId, status)) : set((d) => Object.assign(d.editors.find((e) => e.id === editorId), { status }))
 
-export const completeDeletion = (deletionId) =>
-  set((d) => {
+export const completeDeletion = async (deletionId) =>
+  liveOn ? liveDo(live.adminCompleteDeletion(deletionId)) : set((d) => {
     const del = d.deletions.find((x) => x.id === deletionId)
     const c = d.creators.find((x) => x.id === del.userId)
     Object.assign(c, { name: 'Deleted user', handle: '', phone: '', kyc: { status: 'deleted' }, deleted: true })
