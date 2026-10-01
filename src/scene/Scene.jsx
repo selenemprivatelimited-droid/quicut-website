@@ -33,13 +33,13 @@ const POSES_WIDE = {
   hero: { x: 2.35, y: 0.05, z: 0, s: 1, ry: 0, rx: 0 },
   how: { x: -3.35, y: 0.55, z: -1, s: 0.62, ry: 1, rx: 0.1 },
   numbers: { x: 3.3, y: -0.2, z: -1, s: 0.6, ry: 2, rx: -0.1 },
-  pricing: { x: 0, y: 0.2, z: -7, s: 0.9, ry: 3, rx: 0 },
+  pricing: { x: 3.6, y: 1.55, z: -2.5, s: 0.42, ry: 3, rx: 0 },
   langs: { x: -3.4, y: 0.1, z: -1.2, s: 0.58, ry: 4, rx: 0.12 },
   editors: { x: 3.35, y: 0.2, z: -1.2, s: 0.58, ry: 5, rx: -0.08 },
   join: { x: 0, y: 1.35, z: -0.6, s: 0.62, ry: 6, rx: 0 },
 }
 const POSES_NARROW = {
-  hero: { x: 0, y: 1.45, z: -1.5, s: 0.82, ry: 0, rx: 0 },
+  hero: { x: 0, y: 1.95, z: -1.5, s: 0.66, ry: 0, rx: 0 },
   how: { x: 0.9, y: 2.2, z: -7, s: 0.8, ry: 1, rx: 0 },
   numbers: { x: -0.9, y: 0, z: -8, s: 0.8, ry: 2, rx: 0 },
   pricing: { x: 0, y: 0, z: -9, s: 0.8, ry: 3, rx: 0 },
