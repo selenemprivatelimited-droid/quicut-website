@@ -6,7 +6,7 @@ import { KYC_MODE } from '../app/services/kyc.js'
 import { Toaster, toast, Icon } from '../app/ui.jsx'
 import { RangePicker } from '../app/charts.jsx'
 import { Orders, Kyc, Payouts, People, Pricing } from '../app/views/Admin.jsx'
-import Copilot from '../app/views/Copilot.jsx'
+import ExecAgents from './ExecAgents.jsx'
 import Gate from './Gate.jsx'
 import { Overview, Team } from './Overview.jsx'
 import Analyst from './Analyst.jsx'
@@ -176,7 +176,7 @@ function Shell({ who }) {
           </>
         )}
       </main>
-      <Copilot role="admin" s={s} ids={{}} />
+      <ExecAgents s={s} live={who.live} />
       <Toaster />
     </div>
   )
