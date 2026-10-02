@@ -23,6 +23,7 @@ export default function Access({ me, live }) {
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('support')
   const [busy, setBusy] = useState(false)
+  const [sure, setSure] = useState('')
   const founder = me.role === 'founder'
 
   const load = async () => {
@@ -46,6 +47,19 @@ export default function Access({ me, live }) {
     setBusy(false)
   }
 
+  const remove = async (em) => {
+    setBusy(true)
+    try {
+      await rest('rpc/admin_team_remove', { method: 'POST', body: { p_email: em } })
+      toast('Removed from the team')
+      setSure('')
+      await load()
+    } catch (e) {
+      toast(/admin_team_remove|schema cache|Could not find/i.test(e.message) ? 'Removal is not switched on in the database yet' : e.message)
+    }
+    setBusy(false)
+  }
+
   return (
     <div className="stack">
       <div className="chart-card">
@@ -61,13 +75,30 @@ export default function Access({ me, live }) {
               </div>
               <div className="row-side">
                 {founder && live ? (
-                  <select className="small-input" value={r.role} disabled={busy} onChange={(e) => save(r.email, e.target.value)} aria-label={'Role for ' + r.email}>
-                    {ROLES.map((x) => (
-                      <option key={x.id} value={x.id}>
-                        {x.label}
-                      </option>
-                    ))}
-                  </select>
+                  <>
+                    <select className="small-input" value={r.role} disabled={busy} onChange={(e) => save(r.email, e.target.value)} aria-label={'Role for ' + r.email}>
+                      {ROLES.map((x) => (
+                        <option key={x.id} value={x.id}>
+                          {x.label}
+                        </option>
+                      ))}
+                    </select>
+                    {r.email !== me.email &&
+                      (sure === r.email ? (
+                        <>
+                          <button className="btn btn-red btn-sm" disabled={busy} onClick={() => remove(r.email)}>
+                            Yes, remove
+                          </button>
+                          <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => setSure('')}>
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => setSure(r.email)} aria-label={'Remove ' + r.email}>
+                          Remove
+                        </button>
+                      ))}
+                  </>
                 ) : (
                   <span className="pill pill-muted">{roleLabel(r.role)}</span>
                 )}
