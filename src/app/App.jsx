@@ -38,6 +38,9 @@ export default function App() {
   // Signed in: the account decides the role and the person. Otherwise: the demo switcher.
   const live = account.status === 'live' && s.live
   const role = live ? account.role : demoRole
+  useEffect(() => {
+    document.documentElement.dataset.role = role
+  }, [role])
   const creatorId = live ? account.uid : demoCreator
   const editorId = live ? account.uid : demoEditor
   const ready = !live || (role === 'creator' ? s.creators : s.editors).some((p) => p.id === account.uid)

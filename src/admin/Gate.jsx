@@ -34,10 +34,15 @@ export default function Gate({ children }) {
     } catch (e) {
       setErr(e.message)
     }
-    setSt(dev ? { ok: true, email: 'dev@localhost', live: false } : { signin: true })
+    // No sign-in screen: without a session the panel opens with sample data only. Real data and actions
+    // stay locked in the database (row-level security), so nothing real is exposed. Add ?signin to the
+    // address to sign in as an admin and see live numbers.
+    const wantSignin = typeof location !== 'undefined' && /[?&]signin\b/.test(location.search)
+    setSt(wantSignin ? { signin: true } : { ok: true, email: 'demo@quicut', live: false })
   }
 
   useEffect(() => {
+    document.documentElement.dataset.role = 'admin'
     refresh()
   }, [])
 
