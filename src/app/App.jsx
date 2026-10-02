@@ -6,7 +6,6 @@ import { Toaster, toast, Icon } from './ui.jsx'
 import Creator from './views/Creator.jsx'
 import Editor from './views/Editor.jsx'
 import IntroSplash from '../intro/IntroSplash.jsx'
-import Copilot from './views/Copilot.jsx'
 import { SignInSheet, Onboarding, AccountChip } from './views/Account.jsx'
 import Help from './views/Help.jsx'
 
@@ -129,7 +128,6 @@ export default function App() {
       {signIn && !live && account.status !== 'onboard' && <SignInSheet onClose={() => setSignIn(false)} />}
       {help && live && <Help onClose={() => setHelp(false)} />}
       {account.status === 'onboard' && <Onboarding email={account.email} />}
-      <Copilot role={role} s={s} ids={{ creatorId, editorId }} />
       <Toaster />
     </div>
   )
