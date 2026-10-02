@@ -39,7 +39,7 @@ async function systemHealth(live) {
   }
 }
 
-function Agent({ id, s, live, open, onToggle, slot }) {
+function Agent({ id, s, live, open, onToggle, slot, note }) {
   const a = AGENTS[id]
   const [msgs, setMsgs] = useState([])
   const [text, setText] = useState('')
@@ -72,8 +72,15 @@ function Agent({ id, s, live, open, onToggle, slot }) {
 
   return (
     <>
-      <button className={'agent-fab agent-fab-' + slot + (open ? ' is-open' : '')} onClick={onToggle} aria-expanded={open} aria-controls={'agent-' + id} title={a.name}>
-        <img src={a.art} alt="" width="56" height="56" />
+      <button className={'agent-fab agent-fab-' + slot + (open ? ' is-open' : '')} onClick={onToggle} aria-expanded={open} aria-controls={'agent-' + id} title={note?.count ? `${a.name}: ${note.text}` : a.name}>
+        <span className="fab3d-ball">
+          <img src={a.art} alt="" width="56" height="56" />
+        </span>
+        {note?.count > 0 && (
+          <span className="fab3d-badge" aria-label={note.text}>
+            {note.count > 9 ? '9+' : note.count}
+          </span>
+        )}
         <span className="agent-fab-lbl">{id === 'cfo' ? 'CFO' : 'CIO'}</span>
       </button>
       {open && (
@@ -92,6 +99,7 @@ function Agent({ id, s, live, open, onToggle, slot }) {
           </header>
           <div className="ai-msgs" ref={list} aria-live="polite">
             <div className="ai-msg bot">{a.hello}</div>
+            {note?.count > 0 && <div className="ai-msg bot agent-note">Heads up: {note.text}.</div>}
             {msgs.map((m, i) => (
               <div key={i} className={'ai-msg ' + (m.role === 'user' ? 'me' : 'bot')}>
                 {m.content}
@@ -133,13 +141,45 @@ function Agent({ id, s, live, open, onToggle, slot }) {
   )
 }
 
+const late = (o) => ['paid', 'editing', 'revision'].includes(o.status) && o.dueAt && new Date(o.dueAt).getTime() < Date.now()
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`
+
+// What needs each agent's attention right now: shown as a badge on its button and as a heads-up in its window.
+function useNotes(s, live) {
+  const [errs, setErrs] = useState(0)
+  useEffect(() => {
+    if (!live) return
+    const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+    rest(`monitor_events?select=id&level=eq.error&created_at=gte.${since}&limit=50`)
+      .then((r) => setErrs((r || []).length))
+      .catch(() => {})
+  }, [live])
+  const payouts = s.payouts.filter((p) => p.status === 'requested')
+  const inr = payouts.reduce((n, p) => n + (p.inr || 0), 0)
+  const lateOrders = s.orders.filter(late).length
+  const kyc = [...s.creators, ...s.editors].filter((p) => p.kyc?.status === 'pending').length
+  const dels = (s.deletions || []).filter((d) => d.status === 'requested').length
+  const cfoParts = []
+  if (payouts.length) cfoParts.push(`${plural(payouts.length, 'payout')} waiting (₹${Math.round(inr).toLocaleString('en-IN')})`)
+  const cioParts = []
+  if (lateOrders) cioParts.push(`${plural(lateOrders, 'late order')}`)
+  if (kyc) cioParts.push(`${kyc} KYC to review`)
+  if (dels) cioParts.push(`${plural(dels, 'deletion request')}`)
+  if (errs) cioParts.push(`${plural(errs, 'error')} in 24 h`)
+  return {
+    cfo: { count: payouts.length, text: cfoParts.join(', ') },
+    cio: { count: lateOrders + kyc + dels + errs, text: cioParts.join(', ') },
+  }
+}
+
 // Two separate agents, each with its own button, window and conversation. Opening one closes the other.
 export default function ExecAgents({ s, live }) {
   const [open, setOpen] = useState(null)
+  const notes = useNotes(s, live)
   return (
     <>
-      <Agent id="cfo" slot="1" s={s} live={live} open={open === 'cfo'} onToggle={() => setOpen((o) => (o === 'cfo' ? null : 'cfo'))} />
-      <Agent id="cio" slot="2" s={s} live={live} open={open === 'cio'} onToggle={() => setOpen((o) => (o === 'cio' ? null : 'cio'))} />
+      <Agent id="cfo" slot="1" s={s} live={live} note={notes.cfo} open={open === 'cfo'} onToggle={() => setOpen((o) => (o === 'cfo' ? null : 'cfo'))} />
+      <Agent id="cio" slot="2" s={s} live={live} note={notes.cio} open={open === 'cio'} onToggle={() => setOpen((o) => (o === 'cio' ? null : 'cio'))} />
     </>
   )
 }
