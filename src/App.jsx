@@ -20,6 +20,7 @@ import {
 const qc = (n) => Math.round(n).toLocaleString('en-IN') + ' QC'
 // Teaser: first digit only. The full price is one tap away and always shown in the app before you confirm.
 const teaser = (n) => Math.round(n).toLocaleString('en-IN').replace(/\d/g, (d, i) => (i === 0 ? d : '•')) + ' QC'
+const rsTeaser = (n) => '₹' + Math.round(n).toLocaleString('en-IN').replace(/\d/g, (d, i) => (i === 0 ? d : '•'))
 
 function Nav() {
   const [solid, setSolid] = useState(false)
@@ -434,18 +435,18 @@ function Editors() {
         <div className="payout">
           <div className="payout-head mono">
             <span>Order</span>
-            <span>Creator pays</span>
-            <span>You earn</span>
+            <span>In the market</span>
+            <span>On QuiCut</span>
           </div>
           {TIERS.map((t) => (
             <div key={t.id} className="payout-row">
               <span>{t.name}</span>
-              <span className="mono">{teaser(t.price)}</span>
-              <span className="mono green">{qc(t.price * EDITOR_SHARE)}</span>
+              <span className="mono">{t.market.replace(' QC', '').replace('–', '–₹').replace(/^/, '₹')}</span>
+              <span className="mono green">{rsTeaser(t.price * EDITOR_SHARE)}</span>
             </div>
           ))}
         </div>
-        <p className="fine">Earnings are shown in QuiCut Credits (QC) and paid out to your UPI.</p>
+        <p className="fine">Typical freelance rate vs what you earn per order on QuiCut. Your exact earning is shown in the app on every order.</p>
         <ul className="perks">
           <li>
             <b>Weekly UPI payouts</b> every Monday
