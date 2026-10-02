@@ -3,6 +3,7 @@ import Scene from './scene/Scene.jsx'
 import Logo from './Logo.jsx'
 import { startIntro, sceneState } from './store.js'
 import IntroSplash from './intro/IntroSplash.jsx'
+import { QC_COIN } from './qcCoin.js'
 import {
   TIERS,
   ADDONS,
@@ -15,9 +16,10 @@ import {
   FAQ,
 } from './content.js'
 
-const inr = (n) => '₹' + Math.round(n).toLocaleString('en-IN')
-// Teaser: first digit only. The full price is one tap away and always shown before paying.
-const teaser = (n) => '₹' + Math.round(n).toLocaleString('en-IN').replace(/\d/g, (d, i) => (i === 0 ? d : '•'))
+// Everything is priced in QuiCut Credits (QC).
+const qc = (n) => Math.round(n).toLocaleString('en-IN') + ' QC'
+// Teaser: first digit only. The full price is one tap away and always shown in the app before you confirm.
+const teaser = (n) => Math.round(n).toLocaleString('en-IN').replace(/\d/g, (d, i) => (i === 0 ? d : '•')) + ' QC'
 
 function Nav() {
   const [solid, setSolid] = useState(false)
@@ -149,7 +151,7 @@ function Numbers() {
           ))}
         </div>
         <p className="body-note">
-          A freelance vlog edit in India runs ₹1,500 to ₹3,500, and rush delivery usually costs 25–50% extra. On QuiCut,
+          A freelance vlog edit in India runs 1,500 to 3,500 QC, and rush delivery usually costs 25–50% extra. On QuiCut,
           24-hour delivery is the standard, at a fixed price you see before you pay.
         </p>
       </div>
@@ -178,12 +180,80 @@ function TiltCard({ children, className = '', ...rest }) {
   )
 }
 
+// The QC coin: floats gently, drops its black background so only the gold shows.
+function Coin({ size = 96, style }) {
+  const ref = useRef()
+  useEffect(() => {
+    if (sceneState.reducedMotion || !ref.current?.animate) return
+    const a = ref.current.animate(
+      [
+        { transform: 'translateY(0) rotate(-6deg)' },
+        { transform: 'translateY(-10px) rotate(6deg)' },
+        { transform: 'translateY(0) rotate(-6deg)' },
+      ],
+      { duration: 4200, iterations: Infinity, easing: 'ease-in-out' }
+    )
+    return () => a.cancel()
+  }, [])
+  return <img ref={ref} src={QC_COIN} width={size} height={size} alt="QC coin" style={{ mixBlendMode: 'screen', ...style }} />
+}
+
+const STAGE_NOTES = ['Instantly', 'Within an hour', 'Your editor works on it', 'One free revision included']
+
+// Replaces the old order preview: shows how an order moves, and how long yours takes.
+function Journey({ tier, addons, express }) {
+  const [at, setAt] = useState(0)
+  useEffect(() => {
+    if (sceneState.reducedMotion) return setAt(4)
+    const t = setInterval(() => setAt((x) => Math.min(4, x + 1)), 1100)
+    return () => clearInterval(t)
+  }, [])
+  const stages = ['Paid', 'Matched', 'Editing', 'Review', 'Delivered']
+  const notes = [...STAGE_NOTES, express ? 'In 12 hours' : tier.delivery]
+  return (
+    <aside className="receipt" aria-live="polite">
+      <p className="mono receipt-id">YOUR EDIT, IN MOTION</p>
+      <h3 className="display" style={{ fontSize: '1.15rem', margin: '0.3rem 0 0.9rem' }}>
+        {tier.name}
+      </h3>
+      <div style={{ height: 6, borderRadius: 6, background: 'rgba(255,255,255,0.1)', overflow: 'hidden', marginBottom: '0.9rem' }}>
+        <div style={{ height: '100%', width: (at / 4) * 100 + '%', background: 'var(--red)', borderRadius: 6, transition: 'width 0.9s ease' }} />
+      </div>
+      {stages.map((st, i) => (
+        <div key={st} className="receipt-row" style={{ opacity: i <= at ? 1 : 0.4, transition: 'opacity 0.5s' }}>
+          <span>
+            {i < at ? '✓ ' : i === at ? '● ' : '○ '}
+            {st}
+          </span>
+          <span className="mono">{notes[i]}</span>
+        </div>
+      ))}
+      <div className="receipt-row dim">
+        <span>You get</span>
+        <span className="mono">{tier.output}</span>
+      </div>
+      <div className="receipt-row dim">
+        <span>From</span>
+        <span className="mono">{tier.raw}</span>
+      </div>
+      {addons.length > 0 && (
+        <div className="receipt-row dim">
+          <span>Add-ons</span>
+          <span className="mono">{addons.map((a) => a.name).join(', ')}</span>
+        </div>
+      )}
+      <p className="fine" style={{ margin: '0.8rem 0' }}>You see the exact QC before you confirm an order in the app.</p>
+      <a className="btn btn-red btn-block" href="#join">
+        Get early access
+      </a>
+    </aside>
+  )
+}
+
 function Pricing() {
   const [tierId, setTierId] = useState('vlog')
   const [addons, setAddons] = useState(() => new Set(['captions']))
   const tier = TIERS.find((t) => t.id === tierId)
-  const total = tier.price + ADDONS.filter((a) => addons.has(a.id)).reduce((s, a) => s + a.price, 0)
-  const delivery = addons.has('express') ? '12 hours' : tier.delivery
 
   const toggle = (id) =>
     setAddons((prev) => {
@@ -199,6 +269,14 @@ function Pricing() {
           <p className="eyebrow">Pricing</p>
           <h2 className="display h2">One price per video. No bidding, no haggling.</h2>
           <p className="lede">Every order includes one free revision. Pick a tier to build your order.</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginTop: '1rem' }}>
+            <Coin size={84} />
+            <p className="mono" style={{ margin: 0, fontSize: '0.8rem', lineHeight: 1.5 }}>
+              <b style={{ color: 'var(--red)' }}>QC = QuiCut Credits.</b>
+              <br />
+              Buy credits once, spend them on any edit.
+            </p>
+          </div>
         </div>
         <div className="tiers" role="radiogroup" aria-label="Choose a tier">
           {TIERS.map((t) => (
@@ -214,7 +292,8 @@ function Pricing() {
               {t.popular && <span className="tier-flag mono">Most ordered</span>}
               <h3 className="tier-name">{t.name}</h3>
               <div className={'tier-price display'}>
-                {t.id === tierId ? inr(t.price) : teaser(t.price)}
+                {t.id === tierId && <Coin size={30} style={{ verticalAlign: 'middle', marginRight: '0.35rem' }} />}
+                {t.id === tierId ? qc(t.price) : teaser(t.price)}
                 {t.id !== tierId && <small style={{ display: 'block', marginTop: '0.3rem', fontSize: '0.72rem', fontWeight: 600, letterSpacing: 0, color: 'var(--red)' }}>Tap to see price</small>}
               </div>
               <p className="tier-for">{t.for}</p>
@@ -246,39 +325,11 @@ function Pricing() {
                   <input id={'addon-' + a.id} type="checkbox" checked={addons.has(a.id)} onChange={() => toggle(a.id)} />
                   <span className="addon-name">{a.name}</span>
                   <span className="addon-note">{a.note}</span>
-                  <span className="addon-price mono">+{inr(a.price)}</span>
                 </label>
               ))}
             </div>
           </div>
-          <aside className="receipt" aria-live="polite">
-            <p className="mono receipt-id">ORDER PREVIEW</p>
-            <div className="receipt-row">
-              <span>{tier.name}</span>
-              <span className="mono">{inr(tier.price)}</span>
-            </div>
-            {ADDONS.filter((a) => addons.has(a.id)).map((a) => (
-              <div key={a.id} className="receipt-row dim">
-                <span>{a.name}</span>
-                <span className="mono">+{inr(a.price)}</span>
-              </div>
-            ))}
-            <div className="receipt-total">
-              <span>Total</span>
-              <span className="display">{inr(total)}</span>
-            </div>
-            <div className="receipt-row dim">
-              <span>Delivered in</span>
-              <span className="mono">{delivery}</span>
-            </div>
-            <div className="receipt-row dim">
-              <span>Your editor earns</span>
-              <span className="mono green">{inr(total * EDITOR_SHARE)}</span>
-            </div>
-            <a className="btn btn-red btn-block" href="#join">
-              Get early access
-            </a>
-          </aside>
+          <Journey key={tierId + [...addons].sort().join()} tier={tier} addons={ADDONS.filter((a) => addons.has(a.id))} express={addons.has('express')} />
         </div>
       </div>
     </section>
@@ -389,11 +440,12 @@ function Editors() {
           {TIERS.map((t) => (
             <div key={t.id} className="payout-row">
               <span>{t.name}</span>
-              <span className="mono">{inr(t.price)}</span>
-              <span className="mono green">{inr(t.price * EDITOR_SHARE)}</span>
+              <span className="mono">{teaser(t.price)}</span>
+              <span className="mono green">{qc(t.price * EDITOR_SHARE)}</span>
             </div>
           ))}
         </div>
+        <p className="fine">Earnings are shown in QuiCut Credits (QC) and paid out to your UPI.</p>
         <ul className="perks">
           <li>
             <b>Weekly UPI payouts</b> every Monday

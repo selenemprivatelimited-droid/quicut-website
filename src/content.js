@@ -11,7 +11,7 @@ export const TIERS = [
     raw: '5–15 min raw',
     delivery: 'Same day',
     deliveryHours: 12,
-    market: '₹1,000–₹2,000',
+    market: '1,000–2,000 QC',
   },
   {
     id: 'vlog',
@@ -22,7 +22,7 @@ export const TIERS = [
     raw: 'Up to 30 min raw',
     delivery: '24 hours',
     deliveryHours: 24,
-    market: '₹1,500–₹3,500',
+    market: '1,500–3,500 QC',
     popular: true,
   },
   {
@@ -34,7 +34,7 @@ export const TIERS = [
     raw: 'Up to 25 min raw',
     delivery: '24 hours',
     deliveryHours: 24,
-    market: '₹1,500–₹3,000',
+    market: '1,500–3,000 QC',
   },
   {
     id: 'cinematic',
@@ -45,7 +45,7 @@ export const TIERS = [
     raw: 'Up to 45 min raw',
     delivery: '48 hours',
     deliveryHours: 48,
-    market: '₹3,000–₹8,000',
+    market: '3,000–8,000 QC',
   },
   {
     id: 'wedding',
@@ -56,7 +56,7 @@ export const TIERS = [
     raw: 'Up to 90 min raw',
     delivery: '3 days',
     deliveryHours: 72,
-    market: '₹5,000–₹15,000',
+    market: '5,000–15,000 QC',
   },
 ]
 
@@ -75,7 +75,7 @@ export const STEPS = [
   {
     title: 'Pick your cut',
     body: 'Reel, vlog, gaming montage, cinematic or wedding. Fixed price, shown upfront.',
-    meta: 'From ₹299',
+    meta: 'Priced in QC',
   },
   {
     title: 'Upload and brief',
@@ -142,7 +142,7 @@ export const FAQ = [
   },
   {
     q: 'What if I do not like the edit?',
-    a: 'Every order includes one free revision. Tell the editor what to change in the order chat. More revisions are ₹149 each.',
+    a: 'Every order includes one free revision. Tell the editor what to change in the order chat. More revisions cost extra QC, shown in the app before you confirm.',
   },
   {
     q: 'Who sees my footage?',
