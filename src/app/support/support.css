@@ -1,0 +1,92 @@
+/* Creator / editor support agent */
+.sup-fab {
+  position: fixed;
+  right: 16px;
+  bottom: calc(var(--tab-h, 64px) + var(--safe-b, 0px) + 16px);
+  z-index: 45;
+  width: 60px;
+  height: 60px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  animation: fab3d-float 4.5s ease-in-out infinite;
+}
+.sup-fab:hover { transform: translateY(-4px) scale(1.06); animation-play-state: paused; }
+.sup-fab.is-open { background: var(--acc); box-shadow: 0 0 24px rgba(var(--acc-rgb), 0.6); animation: none; }
+.sup-x { color: #fff; font-size: 1.1rem; }
+.sup-lbl {
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  transform: translateX(-50%);
+  padding: 1px 8px;
+  border-radius: 999px;
+  font: 700 0.62rem var(--f-body);
+  letter-spacing: 0.05em;
+  color: #fff;
+  background: var(--acc);
+}
+.sup-panel { right: 16px; bottom: calc(var(--tab-h, 64px) + var(--safe-b, 0px) + 88px); height: min(560px, calc(100vh - var(--tab-h, 64px) - 120px)); }
+@media (min-width: 761px) {
+  .sup-fab { bottom: 20px; }
+  .sup-panel { bottom: 92px; height: min(580px, calc(100vh - 120px)); }
+}
+@media (max-width: 640px) {
+  .sup-panel { left: 12px; right: 12px; width: auto; }
+}
+.sup-head { display: flex; align-items: center; gap: 12px; }
+.sup-art { width: 48px; height: 48px; border-radius: 14px; object-fit: cover; border: 1px solid var(--glass-edge); background: #0a0a12; }
+.sup-ai { margin-left: 6px; padding: 1px 6px; border-radius: 6px; font: 700 0.62rem var(--f-body); background: rgba(var(--acc-rgb), 0.2); color: var(--acc); vertical-align: middle; }
+.sup-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.sup-human { border-color: rgba(var(--acc-rgb), 0.6); }
+.sup-order { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding: 8px 10px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--hair); }
+
+/* 3D button: a raised glass sphere with a lit rim, soft contact shadow and the portrait standing out of it */
+.fab3d-ball, .sup-ball {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  padding: 4px;
+  background: radial-gradient(120% 120% at 30% 18%, rgba(255, 255, 255, 0.55), rgba(var(--acc-rgb), 0.55) 38%, rgba(10, 10, 20, 0.95) 100%);
+  box-shadow:
+    inset 0 2px 3px rgba(255, 255, 255, 0.55),
+    inset 0 -6px 10px rgba(0, 0, 0, 0.55),
+    0 2px 0 rgba(255, 255, 255, 0.08),
+    0 14px 22px -6px rgba(0, 0, 0, 0.65),
+    0 0 22px -4px rgba(var(--acc-rgb), 0.55);
+}
+.fab3d-ball img, .sup-ball img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); }
+.fab3d-ball::after, .sup-ball::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.28), transparent 38%);
+  pointer-events: none;
+}
+.agent-fab.is-open .fab3d-ball, .sup-fab.is-open .sup-ball { box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.6), 0 0 0 2px var(--acc), 0 0 24px rgba(var(--acc-rgb), 0.6); }
+@keyframes fab3d-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -4px; } }
+.fab3d-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  font: 800 0.72rem var(--f-body);
+  color: #fff;
+  background: radial-gradient(circle at 30% 25%, #ff7a7a, #e5262d 60%, #9d1218);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.6), 0 3px 8px rgba(229, 38, 45, 0.6);
+  animation: fab3d-pulse 1.8s ease-in-out infinite;
+}
+@keyframes fab3d-pulse { 0%, 100% { box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.6), 0 0 0 0 rgba(229, 38, 45, 0.6); } 50% { box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.6), 0 0 0 7px rgba(229, 38, 45, 0); } }
+.agent-note { border: 1px solid rgba(229, 38, 45, 0.5); }
+@media (prefers-reduced-motion: reduce) { .agent-fab, .fab3d-badge { animation: none; } }
