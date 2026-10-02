@@ -1,8 +1,42 @@
-/* CFO / CIO agents (admin) */
-.agent-stack { display: inline-flex; }
-.agent-stack img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; border: 2px solid var(--glass-strong); background: #0a0a18; }
-.agent-stack img + img { margin-left: -10px; }
+/* CFO / CIO agents (admin): two separate round buttons, one window each */
 .agent-head { display: flex; align-items: center; gap: 12px; }
 .agent-art { width: 52px; height: 52px; border-radius: 16px; object-fit: cover; background: #0a0a18; border: 1px solid var(--glass-edge); }
-.agent-tabs { margin: 0 14px 8px; }
-.agents-fab { gap: 8px; padding-left: 10px; }
+.agent-fab {
+  position: fixed;
+  right: 18px;
+  z-index: 45;
+  width: 58px;
+  height: 58px;
+  padding: 0;
+  border: 2px solid var(--glass-edge);
+  border-radius: 50%;
+  background: #0a0a18;
+  cursor: pointer;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.agent-fab img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.agent-fab:hover { transform: translateY(-2px); border-color: rgba(var(--acc-rgb), 0.7); }
+.agent-fab.is-open { border-color: var(--acc); }
+.agent-fab-1 { bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+.agent-fab-2 { bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
+.agent-fab-lbl {
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  transform: translateX(-50%);
+  padding: 1px 8px;
+  border-radius: 999px;
+  font: 700 0.62rem var(--f-body);
+  letter-spacing: 0.06em;
+  color: #fff;
+  background: var(--acc);
+}
+/* window sits to the left of the buttons on wide screens */
+.agent-panel { right: 90px; bottom: 18px; height: min(560px, calc(100vh - 36px)); }
+@media (max-width: 640px) {
+  .agent-fab { right: 12px; width: 52px; height: 52px; }
+  .agent-fab-1 { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+  .agent-fab-2 { bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
+  .agent-panel { left: 12px; right: 12px; bottom: calc(144px + env(safe-area-inset-bottom, 0px)); height: calc(100vh - 170px); }
+}

@@ -39,22 +39,19 @@ async function systemHealth(live) {
   }
 }
 
-export default function ExecAgents({ s, live }) {
-  const [open, setOpen] = useState(false)
-  const [who, setWho] = useState('cfo')
-  const [threads, setThreads] = useState({ cfo: [], cio: [] })
+function Agent({ id, s, live, open, onToggle, slot }) {
+  const a = AGENTS[id]
+  const [msgs, setMsgs] = useState([])
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const list = useRef()
-  const a = AGENTS[who]
-  const msgs = threads[who]
 
   useEffect(() => {
     if (list.current) list.current.scrollTop = list.current.scrollHeight
-  }, [msgs.length, busy, open, who])
+  }, [msgs.length, busy, open])
   useEffect(() => {
     if (!open) return
-    const k = (e) => e.key === 'Escape' && setOpen(false)
+    const k = (e) => e.key === 'Escape' && onToggle()
     window.addEventListener('keydown', k)
     return () => window.removeEventListener('keydown', k)
   }, [open])
@@ -63,34 +60,24 @@ export default function ExecAgents({ s, live }) {
     const content = (q ?? text).trim()
     if (!content || busy) return
     setText('')
-    const id = who
-    const next = [...threads[id], { role: 'user', content }]
-    setThreads((t) => ({ ...t, [id]: next }))
+    const next = [...msgs, { role: 'user', content }]
+    setMsgs(next)
     setBusy(true)
     const ctx = { ...chatContext('admin', s, {}), agent: id === 'cfo' ? 'CFO' : 'CIO', ...(id === 'cio' ? { systemHealth: await systemHealth(live) } : {}) }
-    const framed = [{ role: 'user', content: AGENTS[id].persona }, { role: 'assistant', content: 'Understood.' }, ...next]
+    const framed = [{ role: 'user', content: a.persona }, { role: 'assistant', content: 'Understood.' }, ...next]
     const r = await aiChat('admin', framed, ctx)
-    setThreads((t) => ({ ...t, [id]: [...next, { role: 'assistant', content: r.reply, source: r.source }] }))
+    setMsgs([...next, { role: 'assistant', content: r.reply, source: r.source }])
     setBusy(false)
   }
 
   return (
     <>
-      <button className={'ai-fab agents-fab' + (open ? ' is-open' : '')} onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls="agents-panel">
-        {open ? (
-          <span className="ai-fab-lbl">Close</span>
-        ) : (
-          <>
-            <span className="agent-stack" aria-hidden="true">
-              <img src={CFO_ART} alt="" width="30" height="30" />
-              <img src={CIO_ART} alt="" width="30" height="30" />
-            </span>
-            <span className="ai-fab-lbl">CFO & CIO</span>
-          </>
-        )}
+      <button className={'agent-fab agent-fab-' + slot + (open ? ' is-open' : '')} onClick={onToggle} aria-expanded={open} aria-controls={'agent-' + id} title={a.name}>
+        <img src={a.art} alt="" width="56" height="56" />
+        <span className="agent-fab-lbl">{id === 'cfo' ? 'CFO' : 'CIO'}</span>
       </button>
       {open && (
-        <section id="agents-panel" className="ai-panel" role="dialog" aria-label="CFO and CIO AI agents">
+        <section id={'agent-' + id} className="ai-panel agent-panel" role="dialog" aria-label={a.name + ' AI agent'}>
           <header className="ai-head">
             <div className="agent-head">
               <img className="agent-art" src={a.art} alt="" width="52" height="52" />
@@ -99,17 +86,10 @@ export default function ExecAgents({ s, live }) {
                 <div className="muted small">{a.sub}</div>
               </div>
             </div>
-            <button className="icon-btn" onClick={() => setOpen(false)} aria-label="Close agents">
+            <button className="icon-btn" onClick={onToggle} aria-label={'Close ' + a.name}>
               ✕
             </button>
           </header>
-          <div className="seg agent-tabs" role="tablist" aria-label="Choose agent">
-            {['cfo', 'cio'].map((k) => (
-              <button key={k} role="tab" aria-selected={who === k} className={'seg-btn' + (who === k ? ' is-on' : '')} onClick={() => setWho(k)}>
-                {k === 'cfo' ? 'CFO · Money' : 'CIO · Systems'}
-              </button>
-            ))}
-          </div>
           <div className="ai-msgs" ref={list} aria-live="polite">
             <div className="ai-msg bot">{a.hello}</div>
             {msgs.map((m, i) => (
@@ -149,6 +129,17 @@ export default function ExecAgents({ s, live }) {
           </form>
         </section>
       )}
+    </>
+  )
+}
+
+// Two separate agents, each with its own button, window and conversation. Opening one closes the other.
+export default function ExecAgents({ s, live }) {
+  const [open, setOpen] = useState(null)
+  return (
+    <>
+      <Agent id="cfo" slot="1" s={s} live={live} open={open === 'cfo'} onToggle={() => setOpen((o) => (o === 'cfo' ? null : 'cfo'))} />
+      <Agent id="cio" slot="2" s={s} live={live} open={open === 'cio'} onToggle={() => setOpen((o) => (o === 'cio' ? null : 'cio'))} />
     </>
   )
 }
