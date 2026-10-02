@@ -75,7 +75,7 @@ export const STEPS = [
   {
     title: 'Pick your cut',
     body: 'Reel, vlog, gaming montage, cinematic or wedding. Fixed price, shown upfront.',
-    meta: 'From ₹299',
+    meta: 'Priced in QC',
   },
   {
     title: 'Upload and brief',
@@ -142,7 +142,7 @@ export const FAQ = [
   },
   {
     q: 'What if I do not like the edit?',
-    a: 'Every order includes one free revision. Tell the editor what to change in the order chat. More revisions are ₹149 each.',
+    a: 'Every order includes one free revision. Tell the editor what to change in the order chat. More revisions cost extra QC, shown in the app before you confirm.',
   },
   {
     q: 'Who sees my footage?',
