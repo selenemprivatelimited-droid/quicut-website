@@ -110,3 +110,37 @@ export async function rest(path, { method = 'GET', body, prefer } = {}) {
   if (!r.ok) throw new Error(j?.message || `Database error ${r.status}`)
   return j
 }
+
+// ---- Two-step verification (authenticator app, TOTP) ----
+/** The signed-in person's assurance level ('aal1' = email only, 'aal2' = email + authenticator code). */
+export function sessionLevel(s) {
+  try {
+    const p = JSON.parse(atob(s.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    return p.aal || 'aal1'
+  } catch {
+    return 'aal1'
+  }
+}
+/** Verified authenticator factor of the signed-in person, if any. */
+export async function mfaFactor() {
+  const s = await getSession()
+  const u = await auth('user', null, s.access_token)
+  return (u.factors || []).find((f) => f.factor_type === 'totp' && f.status === 'verified') || null
+}
+/** Starts adding an authenticator app: returns { id, qr, secret }. Old unfinished attempts are cleaned up first. */
+export async function mfaEnroll() {
+  const s = await getSession()
+  const u = await auth('user', null, s.access_token)
+  for (const f of (u.factors || []).filter((f) => f.factor_type === 'totp' && f.status !== 'verified')) {
+    await fetch(`${SUPA_URL}/auth/v1/factors/${f.id}`, { method: 'DELETE', headers: { apikey: SUPA_KEY, Authorization: `Bearer ${s.access_token}` } })
+  }
+  const j = await auth('factors', { factor_type: 'totp', friendly_name: 'QuiCut admin ' + Date.now() }, s.access_token)
+  return { id: j.id, qr: j.totp?.qr_code, secret: j.totp?.secret }
+}
+/** Checks the 6-digit code for a factor and upgrades the session to aal2. */
+export async function mfaVerify(factorId, code) {
+  const s = await getSession()
+  const c = await auth(`factors/${factorId}/challenge`, {}, s.access_token)
+  const j = await auth(`factors/${factorId}/verify`, { challenge_id: c.id, code: code.trim() }, s.access_token)
+  return store({ ...j, user: j.user })
+}

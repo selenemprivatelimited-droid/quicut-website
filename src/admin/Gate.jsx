@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import Logo from '../Logo.jsx'
 import { Icon } from '../app/ui.jsx'
-import { consumeLinkHash, getSession, rest, signOut } from '../app/services/supa.js'
+import { consumeLinkHash, getSession, rest, signOut, sessionLevel, mfaFactor } from '../app/services/supa.js'
+import Mfa from './Mfa.jsx'
 import { EmailSignIn } from '../app/views/Account.jsx'
 
 // The admin panel is only for QuiCut's admins (1 to 10 people).
-// Admins sign in with a link or 6-digit code sent to their email (Supabase Auth). The panel opens only
-// when that email is in the public.admins allow-list, which row-level security lets only admins read.
-// Each admin has a role (Founder, Support Lead, ...) that decides which sections they see.
+// Admins sign in with a link or 6-digit code sent to their email (Supabase Auth), then a second step:
+// a 6-digit code from an authenticator app. The panel opens only when that email is in the public.admins
+// allow-list, which row-level security lets only admins read. Each admin has a role (Founder, Support Lead, ...)
+// that decides which sections they see.
 const DEV_HOSTS = ['localhost', '127.0.0.1']
 
 async function checkAdmin() {
@@ -31,7 +33,16 @@ export default function Gate({ children }) {
     }
     try {
       const who = await checkAdmin()
-      if (who) return setSt(who.admin ? { ok: true, ...who } : { denied: true, ...who })
+      if (who && !who.admin) return setSt({ denied: true, ...who })
+      if (who) {
+        // Admins also need the authenticator code (second step) before the panel opens.
+        const sess = await getSession()
+        if (sessionLevel(sess) !== 'aal2') {
+          const factor = await mfaFactor()
+          return setSt({ mfa: true, factor, ...who })
+        }
+        return setSt({ ok: true, ...who })
+      }
     } catch (e) {
       setErr(e.message)
     }
@@ -78,6 +89,7 @@ export default function Gate({ children }) {
             </div>
           </>
         )}
+        {st.mfa && <Mfa factor={st.factor} onDone={refresh} onCancel={logout} />}
         {st.signin && (
           <>
             <h1>Admins only</h1>
