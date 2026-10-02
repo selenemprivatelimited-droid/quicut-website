@@ -16,7 +16,7 @@ import {
   FAQ,
 } from './content.js'
 
-// Everything is priced in QuiCut Credits (QC). 1 QC = ₹1 when you buy credits.
+// Everything is priced in QuiCut Credits (QC).
 const qc = (n) => Math.round(n).toLocaleString('en-IN') + ' QC'
 // Teaser: first digit only. The full price is one tap away and always shown in the app before you confirm.
 const teaser = (n) => Math.round(n).toLocaleString('en-IN').replace(/\d/g, (d, i) => (i === 0 ? d : '•')) + ' QC'
@@ -151,7 +151,7 @@ function Numbers() {
           ))}
         </div>
         <p className="body-note">
-          A freelance vlog edit in India runs ₹1,500 to ₹3,500, and rush delivery usually costs 25–50% extra. On QuiCut,
+          A freelance vlog edit in India runs 1,500 to 3,500 QC, and rush delivery usually costs 25–50% extra. On QuiCut,
           24-hour delivery is the standard, at a fixed price you see before you pay.
         </p>
       </div>
@@ -445,7 +445,7 @@ function Editors() {
             </div>
           ))}
         </div>
-        <p className="fine">Earnings are shown in QuiCut Credits and paid out to your UPI in rupees at 1 QC = ₹1.</p>
+        <p className="fine">Earnings are shown in QuiCut Credits (QC) and paid out to your UPI.</p>
         <ul className="perks">
           <li>
             <b>Weekly UPI payouts</b> every Monday
