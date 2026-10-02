@@ -1,5 +1,5 @@
 /* Motion + imagery. The backdrop picture (backdrop.css) was generated with Higgsfield (film strips and frosted glass in red/violet light).
-   It sits far behind everything, dimmed, and drifts very slowly. All movement stops for people who ask for reduced motion. */
+   It sits far behind everything, dimmed and still. All movement stops for people who ask for reduced motion. */
 html { background: radial-gradient(60% 40% at 85% -5%, rgba(var(--acc-rgb), 0.18), transparent 70%), var(--void); background-attachment: fixed; }
 body, .app, .admin { background: transparent !important; }
 body::before {
@@ -9,20 +9,15 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background: center / cover no-repeat;
-  opacity: 0.34;
-  filter: saturate(1.1) blur(1px);
-  animation: qc-drift 48s ease-in-out infinite alternate;
+  opacity: 0.12;
+  filter: saturate(0.9) blur(2px);
+  animation: none;
 }
 :root[data-theme='light'] body::before { opacity: 0.07; }
-@keyframes qc-drift { from { transform: translate3d(-1.5%, -1%, 0) scale(1.04); } to { transform: translate3d(1.5%, 1.2%, 0) scale(1.1); } }
 
-/* content arrives with a short rise, one card after another */
-@keyframes qc-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
-.view > *, .admin-main > * { animation: qc-rise 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-.view > *:nth-child(2), .admin-main > *:nth-child(2) { animation-delay: 0.05s; }
-.view > *:nth-child(3), .admin-main > *:nth-child(3) { animation-delay: 0.1s; }
-.view > *:nth-child(4), .admin-main > *:nth-child(4) { animation-delay: 0.15s; }
-.view > *:nth-child(n+5), .admin-main > *:nth-child(n+5) { animation-delay: 0.2s; }
+/* content arrives with a short rise */
+@keyframes qc-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.view > *, .admin-main > * { animation: qc-rise 0.25s ease both; }
 
 /* sheets slide up, toasts pop */
 @keyframes qc-sheet { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
@@ -35,19 +30,16 @@ body::before {
 .btn, .row, .pack, .type, .tabs-bottom .tab, .side-link { transition: transform 0.12s ease, background-color 0.18s ease, box-shadow 0.18s ease; }
 .btn:active, .row:active, .pack:active, .type:active, .tabs-bottom .tab:active { transform: scale(0.97); }
 
-/* a soft light sweeps across the balance card now and then */
-.balance-hero::after, .hero-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.09) 50%, transparent 65%);
-  transform: translateX(-120%);
-  animation: qc-sweep 7s ease-in-out 1.2s infinite;
-  pointer-events: none;
-}
-@keyframes qc-sweep { 0%, 70% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
-
 @media (prefers-reduced-motion: reduce) {
-  body::before, .view > *, .admin-main > *, .sheet, .sheet-wrap, .toast, .balance-hero::after, .hero-card::after { animation: none !important; }
+  .view > *, .admin-main > *, .sheet, .sheet-wrap, .toast { animation: none !important; }
   .btn:active, .row:active, .pack:active, .type:active, .tabs-bottom .tab:active { transform: none; }
 }
+
+/* ---- Comfort pass: solid readable cards, clearer text ---- */
+:root:not([data-theme='light']) {
+  --flat: #15151d;
+  --flat-hover: #1b1b25;
+  --hair: rgba(255, 255, 255, 0.09);
+}
+:root:not([data-theme='light']) body { color: #f1f1f6; }
+:root:not([data-theme='light']) .muted, :root:not([data-theme='light']) .small { color: #b4b4c2; }
