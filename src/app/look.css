@@ -12,11 +12,11 @@
   --flat-hover: rgba(255, 255, 255, 0.06);
   --hair: rgba(255, 255, 255, 0.07);
   --r: 16px;
+  --void: #050507; /* the website background */
 }
 /* soft colour behind the glass so the blur has something to show */
 body {
-  background: radial-gradient(60% 40% at 85% -5%, rgba(var(--acc-rgb), 0.18), transparent 70%), radial-gradient(50% 35% at 0% 20%, rgba(57, 135, 229, 0.14), transparent 70%), var(--void);
-  background-attachment: fixed;
+  background: transparent;
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root {
@@ -172,12 +172,26 @@ h1 { font-size: 1.5rem; } h2 { font-size: 1.2rem; } h3 { font-size: 1rem; }
   --f-mono: 'Onest', ui-monospace, Menlo, monospace;
 }
 
-/* role shades: creator = red, editor = green, admin = violet */
-:root, :root[data-role='creator'] { --acc: #e8281e; --acc-rgb: 232, 40, 30; }
-:root[data-role='editor'] { --acc: #12b76a; --acc-rgb: 18, 183, 106; --red: #12b76a; --red-dim: rgba(18, 183, 106, 0.16); --flame: #34d399; }
-:root[data-role='admin'] { --acc: #7c6cff; --acc-rgb: 124, 108, 255; --red: #7c6cff; --red-dim: rgba(124, 108, 255, 0.16); --flame: #a78bfa; }
-:root[data-role] .btn-red { color: #fff; }
-:root[data-role='editor'] .btn-red { color: #04140c; }
+/* role shades: creator = red, editor = green, admin = violet.
+   --acc is the bright shade (text, icons, active tabs, charts), --acc-btn the filled-button gradient,
+   --acc-soft a light tint, --acc-deep the darkest step. AppScene.jsx tints the 3D backdrop to match. */
+:root, :root[data-role='creator'] {
+  --acc: #ff3d42; --acc-rgb: 255, 61, 66; --acc-soft: #ff8a8d; --acc-deep: #9e0f16;
+  --acc-btn: linear-gradient(135deg, #c40f18 0%, #ed1c24 55%, #ff4a4f 100%); --acc-ink: #ffffff;
+  --red: #ed1c24; --red-dim: rgba(237, 28, 36, 0.15); --flame: #ff7a45;
+}
+:root[data-role='editor'] {
+  --acc: #2fe3a3; --acc-rgb: 47, 227, 163; --acc-soft: #9af5d2; --acc-deep: #0a7a52;
+  --acc-btn: linear-gradient(135deg, #16b97d 0%, #2fe3a3 55%, #7ff7c9 100%); --acc-ink: #03170f;
+  --red: #19c486; --red-dim: rgba(47, 227, 163, 0.14); --flame: #b4f56a;
+}
+:root[data-role='admin'] {
+  --acc: #a48bff; --acc-rgb: 164, 139, 255; --acc-soft: #d2c4ff; --acc-deep: #4c25b8;
+  --acc-btn: linear-gradient(135deg, #5a2ee0 0%, #7c4dff 55%, #b59cff 100%); --acc-ink: #ffffff;
+  --red: #7c4dff; --red-dim: rgba(164, 139, 255, 0.16); --flame: #e08bff;
+}
+:root[data-role] .btn-red { background: var(--acc-btn); color: var(--acc-ink); border: 0; }
+:root[data-role] .btn-red:hover { filter: brightness(1.08); }
 :root[data-role] .balance-hero, :root[data-role] .hero-card { border-color: rgba(var(--acc-rgb), 0.3); }
 :root[data-role] .tabs-bottom .tab.is-on { color: var(--acc); background: rgba(var(--acc-rgb), 0.14); }
 :root[data-role] a { color: var(--acc); }

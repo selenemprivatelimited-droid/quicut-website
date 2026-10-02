@@ -63,8 +63,8 @@ export function makeBladeShape() {
   return new THREE.Shape([...top, ...bot.reverse()])
 }
 
-/** Film strip texture: sprockets + frames with timecodes */
-export function makeFilmTexture() {
+/** Film strip texture: sprockets + frames with timecodes. Colours default to the brand red. */
+export function makeFilmTexture({ hot = '#ed1c24', deep = '#3a0b0d', mid = '#b3141b', deep2 = '#1a0507' } = {}) {
   const W = 2048
   const H = 160
   const c = document.createElement('canvas')
@@ -83,11 +83,11 @@ export function makeFilmTexture() {
   g.globalAlpha = 1
   const labels = ['VLOG', 'REEL', 'BGMI', 'WEDDING', 'TRAVEL', 'SHORT', 'FOOD', 'CINEMATIC']
   const hues = [
-    ['#3a0b0d', '#ed1c24'],
+    [deep, hot],
     ['#101018', '#6b6b78'],
-    ['#1a0507', '#b3141b'],
+    [deep2, mid],
     ['#14141a', '#e6e6ea'],
-    ['#0d0d12', '#ed1c24'],
+    ['#0d0d12', hot],
     ['#202028', '#9a9aa8'],
   ]
   const fw = 200
