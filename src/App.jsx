@@ -3,6 +3,7 @@ import Scene from './scene/Scene.jsx'
 import Logo from './Logo.jsx'
 import { startIntro, sceneState } from './store.js'
 import IntroSplash from './intro/IntroSplash.jsx'
+import { QC_COIN } from './qcCoin.js'
 import {
   TIERS,
   ADDONS,
@@ -179,6 +180,24 @@ function TiltCard({ children, className = '', ...rest }) {
   )
 }
 
+// The QC coin: floats gently, drops its black background so only the gold shows.
+function Coin({ size = 96, style }) {
+  const ref = useRef()
+  useEffect(() => {
+    if (sceneState.reducedMotion || !ref.current?.animate) return
+    const a = ref.current.animate(
+      [
+        { transform: 'translateY(0) rotate(-6deg)' },
+        { transform: 'translateY(-10px) rotate(6deg)' },
+        { transform: 'translateY(0) rotate(-6deg)' },
+      ],
+      { duration: 4200, iterations: Infinity, easing: 'ease-in-out' }
+    )
+    return () => a.cancel()
+  }, [])
+  return <img ref={ref} src={QC_COIN} width={size} height={size} alt="QC coin" style={{ mixBlendMode: 'screen', ...style }} />
+}
+
 const STAGE_NOTES = ['Instantly', 'Within an hour', 'Your editor works on it', 'One free revision included']
 
 // Replaces the old order preview: shows how an order moves, and how long yours takes.
@@ -250,6 +269,14 @@ function Pricing() {
           <p className="eyebrow">Pricing</p>
           <h2 className="display h2">One price per video. No bidding, no haggling.</h2>
           <p className="lede">Every order includes one free revision. Pick a tier to build your order.</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginTop: '1rem' }}>
+            <Coin size={84} />
+            <p className="mono" style={{ margin: 0, fontSize: '0.8rem', lineHeight: 1.5 }}>
+              <b style={{ color: 'var(--red)' }}>QC = QuiCut Credits.</b>
+              <br />
+              Buy credits once, spend them on any edit.
+            </p>
+          </div>
         </div>
         <div className="tiers" role="radiogroup" aria-label="Choose a tier">
           {TIERS.map((t) => (
@@ -265,6 +292,7 @@ function Pricing() {
               {t.popular && <span className="tier-flag mono">Most ordered</span>}
               <h3 className="tier-name">{t.name}</h3>
               <div className={'tier-price display'}>
+                {t.id === tierId && <Coin size={30} style={{ verticalAlign: 'middle', marginRight: '0.35rem' }} />}
                 {t.id === tierId ? qc(t.price) : teaser(t.price)}
                 {t.id !== tierId && <small style={{ display: 'block', marginTop: '0.3rem', fontSize: '0.72rem', fontWeight: 600, letterSpacing: 0, color: 'var(--red)' }}>Tap to see price</small>}
               </div>
