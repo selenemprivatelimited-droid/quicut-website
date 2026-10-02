@@ -1,0 +1,8 @@
+/* CFO / CIO agents (admin) */
+.agent-stack { display: inline-flex; }
+.agent-stack img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; border: 2px solid var(--glass-strong); background: #0a0a18; }
+.agent-stack img + img { margin-left: -10px; }
+.agent-head { display: flex; align-items: center; gap: 12px; }
+.agent-art { width: 52px; height: 52px; border-radius: 16px; object-fit: cover; background: #0a0a18; border: 1px solid var(--glass-edge); }
+.agent-tabs { margin: 0 14px 8px; }
+.agents-fab { gap: 8px; padding-left: 10px; }
