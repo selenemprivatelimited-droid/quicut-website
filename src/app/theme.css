@@ -1,0 +1,17 @@
+/* light / dark switch (admin) */
+.theme-toggle { display: inline-flex; gap: 2px; padding: 3px; border-radius: 12px; background: var(--flat); }
+.theme-toggle button { border: 0; background: transparent; color: var(--t2); font: inherit; font-size: 0.78rem; font-weight: 600; padding: 6px 12px; border-radius: 9px; cursor: pointer; min-height: 32px; }
+.theme-toggle button.is-on { background: var(--acc); color: #fff; }
+:root[data-theme='light'] {
+  color-scheme: light;
+  --void: #f4f5f9; --base: #ffffff; --s1: #ffffff; --s2: #eceef5; --s3: #e1e4ee;
+  --t1: #14141c; --t2: #52526b; --t3: #7a7a92; --border: #dcdfea;
+  --glass: rgba(255, 255, 255, 0.7); --glass-strong: rgba(255, 255, 255, 0.85); --glass-edge: rgba(20, 20, 40, 0.1);
+  --glass-hi: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --flat: rgba(20, 20, 40, 0.04); --flat-hover: rgba(20, 20, 40, 0.07); --hair: rgba(20, 20, 40, 0.09);
+}
+:root[data-theme='light'] body { background: radial-gradient(60% 40% at 85% -5%, rgba(var(--acc-rgb), 0.12), transparent 70%), var(--void); }
+:root[data-theme='light'] .balance-hero, :root[data-theme='light'] .wallet-card, :root[data-theme='light'] .hero-card { background: radial-gradient(120% 140% at 100% 0%, rgba(var(--acc-rgb), 0.18), transparent 60%), var(--glass); }
+:root[data-theme='light'] .side, :root[data-theme='light'] .topbar { background: var(--glass-strong); }
+:root[data-theme='light'] .btn-ghost, :root[data-theme='light'] .pill-muted { color: var(--t1); }
+:root[data-theme='light'] .side-brand { background: #0f0f14; border-radius: 12px; padding: 8px 10px; }

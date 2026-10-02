@@ -7,14 +7,15 @@ import { EmailSignIn } from '../app/views/Account.jsx'
 // The admin panel is only for QuiCut's admins (1 to 10 people).
 // Admins sign in with a link or 6-digit code sent to their email (Supabase Auth). The panel opens only
 // when that email is in the public.admins allow-list, which row-level security lets only admins read.
-// On localhost the gate opens with demo data so the panel can be developed without signing in.
+// Each admin has a role (Founder, Support Lead, ...) that decides which sections they see.
 const DEV_HOSTS = ['localhost', '127.0.0.1']
 
 async function checkAdmin() {
   const s = await getSession()
   if (!s) return null
-  const rows = await rest('admins?select=email&limit=1')
-  return { email: s.email, admin: Array.isArray(rows) && rows.length > 0, live: true }
+  const rows = await rest('admins?select=email,role')
+  const me = Array.isArray(rows) ? rows.find((r) => r.email === String(s.email || '').toLowerCase()) : null
+  return { email: s.email, admin: !!me, role: me?.role || 'founder', live: true }
 }
 
 export default function Gate({ children }) {
@@ -38,7 +39,7 @@ export default function Gate({ children }) {
     // stay locked in the database (row-level security), so nothing real is exposed. Add ?signin to the
     // address to sign in as an admin and see live numbers.
     const wantSignin = typeof location !== 'undefined' && /[?&]signin\b/.test(location.search)
-    setSt(wantSignin ? { signin: true } : { ok: true, email: 'demo@quicut', live: false })
+    setSt(wantSignin ? { signin: true } : { ok: true, email: 'demo@quicut', role: 'founder', live: false })
   }
 
   useEffect(() => {

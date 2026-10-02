@@ -11,6 +11,7 @@ import Gate from './Gate.jsx'
 import { Overview, Team } from './Overview.jsx'
 import Analyst from './Analyst.jsx'
 import Monitor from './Monitor.jsx'
+import Access, { canSee, roleLabel } from './Access.jsx'
 
 const NAV = [
   { id: 'overview', label: 'Overview', icon: 'chart' },
@@ -22,6 +23,7 @@ const NAV = [
   { id: 'payouts', label: 'Payouts', icon: 'rupee' },
   { id: 'people', label: 'Accounts', icon: 'user' },
   { id: 'pricing', label: 'Pricing', icon: 'tag' },
+  { id: 'access', label: 'Admin team', icon: 'shield' },
 ]
 const TITLES = {
   overview: ['Overview', 'Money, orders and alerts, day by day'],
@@ -33,6 +35,7 @@ const TITLES = {
   payouts: ['Payouts', 'Weekly editor payouts by UPI'],
   people: ['Accounts', 'Bonus credits, editor status, deletion requests'],
   pricing: ['Pricing', 'Credit packs and per-edit prices'],
+  access: ['Admin team', 'Who can open the admin panel, and what each role sees'],
 }
 
 function initialSection() {
@@ -64,7 +67,24 @@ function Shell({ who }) {
     kyc: kycQueue.length,
     payouts: s.payouts.filter((p) => p.status === 'requested').length,
   }
-  const [title, sub] = TITLES[sec]
+  const nav = NAV.filter((n) => canSee(who.role, n.id))
+  useEffect(() => {
+    if (!canSee(who.role, sec)) setSecState(nav[0]?.id || 'overview')
+  }, [who.role])
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem('qc-theme') || 'dark'
+    } catch {
+      return 'dark'
+    }
+  })
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    try {
+      localStorage.setItem('qc-theme', theme)
+    } catch {}
+  }, [theme])
+  const [title, sub] = TITLES[canSee(who.role, sec) ? sec : nav[0]?.id || 'overview']
   return (
     <div className="admin">
       <aside className="side">
@@ -73,7 +93,7 @@ function Shell({ who }) {
           <span className="side-tag">Admin</span>
         </a>
         <nav className="side-nav" aria-label="Admin sections">
-          {NAV.map((n) => (
+          {nav.map((n) => (
             <button key={n.id} className={'side-link' + (sec === n.id ? ' is-on' : '')} onClick={() => setSec(n.id)} aria-current={sec === n.id ? 'page' : undefined}>
               <Icon name={n.icon} size={18} />
               <span>{n.label}</span>
@@ -85,6 +105,17 @@ function Shell({ who }) {
           <div className="side-user">
             <span className="avatar sm">{(who.email || 'A')[0].toUpperCase()}</span>
             <span className="small">{who.email}</span>
+          </div>
+          <div className="mode-tags">
+            <span className="pill pill-muted">{roleLabel(who.role)}</span>
+          </div>
+          <div className="theme-toggle" role="group" aria-label="Theme">
+            <button className={theme === 'light' ? 'is-on' : ''} onClick={() => setTheme('light')} aria-label="Light theme">
+              Light
+            </button>
+            <button className={theme === 'dark' ? 'is-on' : ''} onClick={() => setTheme('dark')} aria-label="Dark theme">
+              Dark
+            </button>
           </div>
           <div className="mode-tags">
             <span className={'pill ' + (live ? 'pill-green' : 'pill-muted')}>Data: {live ? 'live' : 'demo'}</span>
@@ -137,6 +168,7 @@ function Shell({ who }) {
             {sec === 'payouts' && <Payouts s={s} />}
             {sec === 'people' && <People s={s} />}
             {sec === 'pricing' && <Pricing />}
+            {sec === 'access' && <Access me={{ email: who.email, role: who.role }} live={who.live} />}
           </>
         )}
       </main>
