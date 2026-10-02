@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Logo from '../Logo.jsx'
+import { rest } from '../app/services/supa.js'
 import { useStore, resetDemo, alerts, enterAdminLive } from '../app/services/store.js'
 import { MODE } from '../app/services/payments.js'
 import { KYC_MODE } from '../app/services/kyc.js'
@@ -12,6 +13,7 @@ import { Overview, Team } from './Overview.jsx'
 import Analyst from './Analyst.jsx'
 import Monitor from './Monitor.jsx'
 import Tickets from './Tickets.jsx'
+import Vetting from './Vetting.jsx'
 import Access, { canSee, roleLabel } from './Access.jsx'
 
 const NAV = [
@@ -21,6 +23,7 @@ const NAV = [
   { id: 'monitor', label: 'Errors & speed', icon: 'pulse' },
   { id: 'tickets', label: 'Support', icon: 'inbox' },
   { id: 'orders', label: 'Orders', icon: 'list' },
+  { id: 'vetting', label: 'Editor vetting', icon: 'users' },
   { id: 'kyc', label: 'KYC', icon: 'shield' },
   { id: 'payouts', label: 'Payouts', icon: 'rupee' },
   { id: 'people', label: 'Accounts', icon: 'user' },
@@ -34,6 +37,7 @@ const TITLES = {
   monitor: ['Errors & speed', 'Live crashes, failed API calls and page speed from real users'],
   tickets: ['Support', 'Requests from creators and editors'],
   orders: ['Orders', 'Assign editors, refunds, deadlines'],
+  vetting: ['Editor vetting', 'Five-step selection: screening, portfolio, test edit, interview, probation'],
   kyc: ['KYC', 'Identity checks for creators and editors'],
   payouts: ['Payouts', 'Weekly editor payouts by UPI'],
   people: ['Accounts', 'Bonus credits, editor status, deletion requests'],
@@ -65,9 +69,15 @@ function Shell({ who }) {
     window.scrollTo({ top: 0 })
   }
   const kycQueue = [...s.creators.map((p) => ({ ...p, role: 'creator' })), ...s.editors.map((p) => ({ ...p, role: 'editor' }))].filter((p) => p.kyc?.status === 'pending')
+  const [vetCount, setVetCount] = useState(0)
+  useEffect(() => {
+    if (!who.live || !canSee(who.role, 'vetting')) return
+    rest('editor_applications?select=id&status=eq.active&stage=in.(1,2,3)&limit=200').then((r) => setVetCount((r || []).length)).catch(() => {})
+  }, [who.live, who.role, sec])
   const counts = {
     overview: alerts(s).length,
     kyc: kycQueue.length,
+    vetting: vetCount,
     payouts: s.payouts.filter((p) => p.status === 'requested').length,
   }
   const nav = NAV.filter((n) => canSee(who.role, n.id))
@@ -168,6 +178,7 @@ function Shell({ who }) {
             {sec === 'monitor' && <Monitor live={who.live} />}
             {sec === 'tickets' && <Tickets live={who.live} />}
             {sec === 'orders' && <Orders s={s} />}
+            {sec === 'vetting' && <Vetting live={who.live} />}
             {sec === 'kyc' && <Kyc s={s} queue={kycQueue} />}
             {sec === 'payouts' && <Payouts s={s} />}
             {sec === 'people' && <People s={s} />}
