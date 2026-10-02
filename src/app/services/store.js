@@ -98,12 +98,28 @@ function save() {
     /* storage blocked: keep in memory */
   }
 }
+// Prototype: other tabs and windows of the same browser see changes the moment they happen.
+const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('quicut-proto') : null
+if (channel)
+  channel.onmessage = () => {
+    if (liveOn) return
+    try {
+      const raw = localStorage.getItem(KEY)
+      if (raw) {
+        state = JSON.parse(raw)
+        listeners.forEach((l) => l())
+      }
+    } catch {
+      /* ignore */
+    }
+  }
 function set(mutator) {
   const draft = structuredClone(state)
   mutator(draft)
   state = draft
   save()
   listeners.forEach((l) => l())
+  if (!liveOn) channel?.postMessage(1)
 }
 
 export function useStore() {
@@ -113,6 +129,7 @@ export function useStore() {
   )
 }
 export const getState = () => state
+const DEMO_MS_PER_HOUR = 10000
 export const resetDemo = () => (liveOn ? refreshLive() : set((d) => Object.assign(d, seed())))
 
 // ── Live mode (real accounts on Supabase) ──
@@ -309,7 +326,6 @@ export async function placeOrder({ creatorId, typeId, addons, title, brief, foot
   const c = state.creators.find((x) => x.id === creatorId)
   if (!isVerified(c)) throw new Error('Complete KYC before placing an order.')
   const q = quote(typeId, addons)
-  if (creditBalance(state, creatorId) < q.credits) throw new Error('Not enough credits')
   const id = `QC-${state.seq + 1}`
   set((d) => {
     d.seq += 1
@@ -323,10 +339,12 @@ export async function placeOrder({ creatorId, typeId, addons, title, brief, foot
       checklist: checklist || null,
       footage: footage || 'raw_footage.mp4',
       status: 'paid',
+      proto: true,
       credits: q.credits,
       editorPayInr: q.editorPayInr,
       at: now(),
-      dueAt: new Date(Date.now() + q.hours * 3600e3).toISOString(),
+      // prototype clock: one delivery hour runs as 10 seconds, so a whole order can be watched end to end
+      dueAt: new Date(Date.now() + q.hours * DEMO_MS_PER_HOUR).toISOString(),
       revisions: 0,
       deliveryUrl: '',
       history: [{ status: 'paid', at: now() }],
@@ -428,3 +446,50 @@ export const completeDeletion = async (deletionId) =>
     Object.assign(c, { name: 'Deleted user', handle: '', phone: '', kyc: { status: 'deleted' }, deleted: true })
     Object.assign(del, { status: 'done', doneAt: now() })
   })
+
+
+// ── Prototype engine (demo only) ──
+// A simulated editor picks up orders nobody has taken for 15 s, edits them on the prototype clock and delivers.
+// Switch it off in the menu when two people are testing Creator and Editor together.
+const SIM_KEY = 'quicut-sim'
+export const simOn = () => {
+  try {
+    return localStorage.getItem(SIM_KEY) !== 'off'
+  } catch {
+    return true
+  }
+}
+export const setSim = (on) => {
+  try {
+    localStorage.setItem(SIM_KEY, on ? 'on' : 'off')
+  } catch {
+    /* ignore */
+  }
+  listeners.forEach((l) => l())
+}
+function tick() {
+  if (liveOn || !simOn()) return
+  const t = Date.now()
+  const open = state.orders.find((o) => o.status === 'paid' && o.proto && t - new Date(o.at).getTime() > 15000)
+  if (open) {
+    const ed = state.editors.find((e) => e.id === 'e2') || state.editors[0]
+    set((d) => move(d, open.id, 'editing', { editorId: ed.id, sim: true }))
+    return
+  }
+  const mine = state.orders.find((o) => o.status === 'editing' && o.sim && t >= new Date(o.at).getTime() + (new Date(o.dueAt) - new Date(o.at)) * 0.7)
+  if (mine) set((d) => move(d, mine.id, 'review', { deliveryUrl: 'https://example.com/quicut-prototype-delivery' }))
+}
+if (typeof window !== 'undefined') setInterval(tick, 2000)
+
+/** Prototype sign-up: makes a verified demo person so a tester can log in with any name. */
+export function demoSignUp(role, name) {
+  const id = nextId(role === 'creator' ? 'c' : 'e')
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '') || 'tester'
+  set((d) => {
+    if (role === 'creator')
+      d.creators.push({ id, name, handle: '@' + slug, lang: 'English', phone: '', region: 'IN', joined: now(), kyc: verified() })
+    else
+      d.editors.push({ id, name, city: 'Hyderabad', skills: ['reel', 'vlog', 'gaming', 'cinematic', 'wedding'], upi: slug + '@okdemo', rating: 0, ratings: 0, status: 'active', kyc: verified({ panLast4: '••••000X' }) })
+  })
+  return id
+}

@@ -71,6 +71,10 @@ const ICONS = {
   alert: 'M12 4 2.5 20h19L12 4ZM12 10v4.5M12 17.5h.01',
   logout: 'M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10',
   pulse: 'M2 12h4l2.5-6 4 13 3-9 1.5 2H22',
+  menu: 'M4 7h16M4 12h16M4 17h16',
+  close: 'M6 6l12 12M18 6 6 18',
+  arrow: 'M5 12h14M13 6l6 6-6 6',
+  film: 'M3 5h18v14H3ZM3 10h18M8 5v5M16 5v5',
 }
 export function Icon({ name, size = 20 }) {
   return (

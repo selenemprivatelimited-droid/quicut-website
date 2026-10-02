@@ -17,78 +17,92 @@ import { aiBrief } from '../services/ai.js'
 import { AiCard, VoiceButton } from './Copilot.jsx'
 import OrderThread from './OrderThread.jsx'
 import { KycBanner } from './Kyc.jsx'
-import { Tabs, Credits, Coin, Pill, Empty, Sheet, Timeline, Stars, Icon, toast, act, qc, ago, dueIn } from '../ui.jsx'
+import { Credits, Coin, Pill, Empty, Sheet, Timeline, Stars, Icon, toast, act, qc, ago, dueIn } from '../ui.jsx'
+import { StudioFrame, OrderDeck, Tile, stageOf, orderProgress } from '../studio.jsx'
 import { creatorMetrics } from '../services/metrics.js'
 import { TrendChart, HBars, Kpi, RangePicker, ChartCard, seriesTable, fmtNum, useAnimatedNumber } from '../charts.jsx'
 
 export default function Creator({ s, creatorId }) {
   const [tab, setTab] = useState('home')
   const me = s.creators.find((c) => c.id === creatorId)
-  const balance = creditBalance(s, creatorId)
+  // Demo accounts have unlimited QC so every flow can be tried. Signed-in accounts use the real ledger.
+  const balance = isLive() ? creditBalance(s, creatorId) : Infinity
   const orders = s.orders.filter((o) => o.creatorId === creatorId)
   const toReview = orders.filter((o) => o.status === 'review').length
+  const active = orders.filter((o) => !['completed', 'refunded'].includes(o.status))
 
   return (
-    <div className="role-view">
-      <div className="view-head">
-        <div>
-          <p className="kicker">// creator</p>
-          <h1>Hi {me.name.split(' ')[0]}</h1>
-        </div>
-        <button className="balance-chip" onClick={() => setTab('wallet')} aria-label="Open wallet">
-          <Credits n={balance} />
-          <span className="chip-add">+ Add</span>
+    <StudioFrame
+      role="creator"
+      tab={tab}
+      setTab={setTab}
+      name={me.name}
+      line={`CREATOR · ${Number.isFinite(balance) ? qc(balance) : '∞'} QC`}
+      chip={
+        <button className="st-chip" onClick={() => setTab('wallet')} aria-label="Open wallet">
+          <Coin size={20} /> {Number.isFinite(balance) ? qc(balance) : '∞'}
         </button>
-      </div>
+      }
+      menu={[
+        { title: 'CREATE', items: [{ id: 'home', label: 'Home' }, { id: 'new', label: 'New edit' }, { id: 'orders', label: 'My orders', count: toReview || active.length }] },
+        { title: 'CREDITS', items: [{ id: 'wallet', label: 'Wallet · buy credits' }] },
+        { title: 'ACCOUNT', items: [{ id: 'profile', label: 'Profile' }] },
+      ]}
+      toolbar={{
+        left: { label: 'Add credits', icon: 'wallet', tab: 'wallet' },
+        main: { label: 'New edit', icon: 'plus', tab: 'new' },
+        right: { label: 'Orders', icon: 'list', tab: 'orders', count: toReview },
+      }}
+    >
       <KycBanner role="creator" person={me} compact />
-      <Tabs
-        value={tab}
-        onChange={setTab}
-        bottom
-        tabs={[
-          { id: 'home', label: 'Home', icon: 'home' },
-          { id: 'new', label: 'New edit', icon: 'plus' },
-          { id: 'orders', label: 'Orders', icon: 'list', count: toReview },
-          { id: 'wallet', label: 'Wallet', icon: 'wallet' },
-          { id: 'profile', label: 'Profile', icon: 'user' },
-        ]}
-      />
-      {tab === 'home' && <Home s={s} creatorId={creatorId} orders={orders} balance={balance} go={setTab} />}
+      {tab === 'home' && <Home s={s} me={me} creatorId={creatorId} orders={orders} balance={balance} go={setTab} />}
       {tab === 'new' && <NewEdit me={me} balance={balance} go={setTab} />}
       {tab === 'orders' && <Orders s={s} orders={orders} />}
       {tab === 'wallet' && <Wallet s={s} me={me} balance={balance} />}
       {tab === 'profile' && <Profile s={s} me={me} orders={orders} />}
-    </div>
+    </StudioFrame>
   )
 }
 
-function Home({ s, creatorId, orders, balance, go }) {
+function Home({ s, me, creatorId, orders, balance, go }) {
   const [days, setDays] = useState(30)
   const m = useMemo(() => creatorMetrics(s, creatorId, days), [s, creatorId, days])
   const active = orders.filter((o) => !['completed', 'refunded'].includes(o.status))
   const cheapest = Math.min(...EDIT_TYPES.map((t) => t.credits))
-  const shown = useAnimatedNumber(balance)
   const spentSeries = [{ name: 'Credits spent', values: m.spentDaily }]
+  const unlimited = !Number.isFinite(balance)
+  const cards = active.length
+    ? active.map((o) => ({
+        key: o.id,
+        order: o,
+        kicker: o.status === 'review' ? 'READY FOR YOU' : 'IN PROGRESS',
+        title: o.title,
+        meta: `${o.id} · ${editType(o.typeId).name}`,
+        dueAt: o.dueAt,
+        progress: orderProgress(o),
+        stage: stageOf(o).label,
+        cta: o.status === 'review' ? 'Review & approve' : 'Open order',
+        onOpen: () => go('orders'),
+      }))
+    : [
+        {
+          key: 'empty',
+          kicker: 'NO EDIT RUNNING',
+          title: 'Start your first edit',
+          meta: 'Pick a type, upload footage, write the brief',
+          dueAt: null,
+          pill: 'Ready when you are',
+          progress: 0,
+          stage: 'Waiting for your brief',
+          cta: 'New edit',
+          onOpen: () => go('new'),
+        },
+      ]
   return (
     <div className="stack">
-      <section className="balance-hero">
-        <div>
-          <p className="kicker">// your balance</p>
-          <div className="balance-num">
-            <Coin size={34} /> {qc(shown)}
-          </div>
-          <p className="muted small">Enough for {Math.floor(balance / 499)} Standard Vlog{Math.floor(balance / 499) === 1 ? '' : 's'} or {Math.floor(balance / 299)} Reel{Math.floor(balance / 299) === 1 ? '' : 's'}</p>
-        </div>
-        <div className="balance-actions">
-          <button className="btn btn-red" onClick={() => go('new')}>
-            <Icon name="plus" size={18} /> New edit
-          </button>
-          <button className="btn btn-ghost" onClick={() => go('wallet')}>
-            <Icon name="wallet" size={18} /> Add credits
-          </button>
-        </div>
-      </section>
-      {balance < cheapest && (
+      <h1 className="st-hello">Hi {me.name.split(' ')[0]}</h1>
+      <OrderDeck cards={cards} hint="Swipe the card to see your other edits. Each one shows how long it will take." />
+      {!unlimited && balance < cheapest && (
         <div className="notice">
           You have <Credits n={balance} />. Top up to order your next edit.{' '}
           <button className="link-btn" onClick={() => go('wallet')}>
@@ -96,16 +110,17 @@ function Home({ s, creatorId, orders, balance, go }) {
           </button>
         </div>
       )}
-      {active.length > 0 && (
-        <>
-          <h3 className="section-title">In progress</h3>
-          <div className="list">
-            {active.map((o) => (
-              <OrderRow key={o.id} o={o} onClick={() => go('orders')} />
-            ))}
-          </div>
-        </>
-      )}
+      <div className="st-tiles">
+        <Tile label="CREDITS SPENT · 30D" value={qc(m.spent.value)} />
+        <Tile label="EDITS ORDERED · 30D" value={fmtNum(m.orders.value)} />
+      </div>
+      <p className="muted small st-note">
+        {unlimited ? (
+          'Demo account: unlimited QC, so you can try every edit type.'
+        ) : (
+          <>Enough for {Math.floor(balance / 499)} Standard Vlog{Math.floor(balance / 499) === 1 ? '' : 's'} or {Math.floor(balance / 299)} Reel{Math.floor(balance / 299) === 1 ? '' : 's'}.</>
+        )}
+      </p>
       <div className="dash-head">
         <h3 className="section-title">Your activity</h3>
         <RangePicker value={days} onChange={setDays} />
@@ -123,7 +138,6 @@ function Home({ s, creatorId, orders, balance, go }) {
           <HBars items={[...m.byType].sort((a, b) => b.value - a.value)} />
         </ChartCard>
       )}
-      {!active.length && !orders.length && <Empty title="No edits yet">Start one and it shows up here with a live countdown.</Empty>}
     </div>
   )
 }

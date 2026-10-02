@@ -1,25 +1,16 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
-import Logo from '../Logo.jsx'
-import { useStore, resetDemo, useAccount, initAccount } from './services/store.js'
+import { useEffect, useMemo, useState } from 'react'
+import { useStore, resetDemo, useAccount, initAccount, signOutAccount } from './services/store.js'
 import { MODE } from './services/payments.js'
-import { Toaster, toast, Icon } from './ui.jsx'
+import { Toaster, toast } from './ui.jsx'
+import { ShellCtx } from './studio.jsx'
 import { rest } from './services/supa.js'
 import Creator from './views/Creator.jsx'
 import Editor from './views/Editor.jsx'
 import IntroSplash from '../intro/IntroSplash.jsx'
-import { SignInSheet, Onboarding, AccountChip } from './views/Account.jsx'
+import { SignInSheet, Onboarding } from './views/Account.jsx'
 import Help from './views/Help.jsx'
+import ProtoLogin from './views/ProtoLogin.jsx'
 import SupportAgent from './views/SupportAgent.jsx'
-
-const AppScene = lazy(() => import('./AppScene.jsx'))
-const hasWebGL = (() => {
-  try {
-    const c = document.createElement('canvas')
-    return !!(c.getContext('webgl2') || c.getContext('webgl'))
-  } catch {
-    return false
-  }
-})()
 
 // Admin is not part of the public app. It lives at /admin/ and opens only for allow-listed admin emails.
 const ROLES = [
@@ -38,9 +29,36 @@ export default function App() {
   const [signIn, setSignIn] = useState(false)
   const [help, setHelp] = useState(false)
   const [replies, setReplies] = useState(0)
-  const [demoRole, setRoleState] = useState(initialRole)
-  const [demoCreator, setCreatorId] = useState('c1')
-  const [demoEditor, setEditorId] = useState('e1')
+  const [session, setSession] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('quicut-proto-session'))
+    } catch {
+      return null
+    }
+  })
+  const [demoRole, setRoleState] = useState(() => session?.role || initialRole())
+  const [demoCreator, setCreatorId] = useState(() => (session?.role === 'creator' ? session.id : 'c1'))
+  const [demoEditor, setEditorId] = useState(() => (session?.role === 'editor' ? session.id : 'e1'))
+  const login = (r, id) => {
+    const ses = { role: r, id }
+    try {
+      localStorage.setItem('quicut-proto-session', JSON.stringify(ses))
+    } catch {
+      /* ignore */
+    }
+    setSession(ses)
+    setRoleState(r)
+    ;(r === 'creator' ? setCreatorId : setEditorId)(id)
+    history.replaceState(null, '', '#' + r)
+  }
+  const logout = () => {
+    try {
+      localStorage.removeItem('quicut-proto-session')
+    } catch {
+      /* ignore */
+    }
+    setSession(null)
+  }
   useEffect(() => {
     initAccount()
   }, [])
@@ -67,65 +85,20 @@ export default function App() {
   }, [live, help])
   const setWho = role === 'creator' ? setCreatorId : setEditorId
 
-  return (
-    <div className="app">
-      <div className="app-scene app-scene-fallback" aria-hidden="true" />
-      {hasWebGL && (
-        <Suspense fallback={null}>
-          <AppScene />
-        </Suspense>
-      )}
-      <IntroSplash />
-      <header className="topbar">
-        <a href="./" className="brand" aria-label="QuiCut website">
-          <Logo height={24} id="app-logo" />
-        </a>
-        {live ? (
-          <AccountChip s={s} account={account} />
-        ) : (
-          <div className="role-switch" role="tablist" aria-label="View as">
-            {ROLES.map((r) => (
-              <button
-                key={r.id}
-                role="tab"
-                aria-selected={role === r.id}
-                className={'role' + (role === r.id ? ' is-on' : '')}
-                onClick={() => setRole(r.id)}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
-        )}
-        {people && (
-          <label className="who">
-            <span className="sr-only">Signed in as</span>
-            <select id="who" value={who} onChange={(e) => setWho(e.target.value)}>
-              {people.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {live && (
-          <button className="btn btn-ghost btn-sm" onClick={() => setHelp(true)} aria-label="Help and support">
-            <Icon name="inbox" size={16} /> Help{replies > 0 && <span className="fab3d-badge" style={{ position: 'static', marginLeft: 6, minWidth: 18, height: 18, fontSize: '0.65rem', display: 'inline-grid' }}>{replies}</span>}
-          </button>
-        )}
-        {!live && account.status !== 'loading' && (
-          <button className="btn btn-ghost btn-sm signin-btn" onClick={() => setSignIn(true)}>
-            <Icon name="user" size={16} /> Sign in
-          </button>
-        )}
-      </header>
+  const shell = useMemo(
+    () => ({ live, roles: ROLES, setRole, people, who, setWho, replies, openHelp: () => setHelp(true), openSignIn: () => setSignIn(true), canSignOut: live || !!session, signOut: () => (live ? signOutAccount() : logout()) }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [live, people, who, replies, demoRole, session]
+  )
 
+  return (
+    <ShellCtx.Provider value={shell}>
+    <div className="app">
+      <IntroSplash />
       {MODE === 'demo' && !live && (
         <div className="demo-bar">
           <span>
-            <b>Demo mode.</b> Payments are simulated and data stays in this browser. Switch between Creator and Editor above to
-            follow an order end to end, or sign in to use your real account.
+            <b>Demo mode.</b> Unlimited QC, simulated payments. Use the menu to switch Creator and Editor, or sign in.
           </span>
           <button
             className="link-btn"
@@ -142,6 +115,8 @@ export default function App() {
       <main className="view">
         {account.status === 'loading' || !ready ? (
           <p className="muted center">Loading your account…</p>
+        ) : !live && !session && account.status !== 'onboard' ? (
+          <ProtoLogin s={s} initialRole={initialRole()} onLogin={login} onReal={() => setSignIn(true)} />
         ) : (
           <>
             {role === 'creator' && <Creator s={s} creatorId={creatorId} />}
@@ -152,8 +127,9 @@ export default function App() {
       {signIn && !live && account.status !== 'onboard' && <SignInSheet onClose={() => setSignIn(false)} />}
       {help && live && <Help onClose={() => setHelp(false)} />}
       {account.status === 'onboard' && <Onboarding email={account.email} />}
-      {ready && account.status !== 'loading' && account.status !== 'onboard' && <SupportAgent key={role} role={role} s={s} ids={{ creatorId, editorId }} live={live} />}
+      {ready && (live || session) && account.status !== 'loading' && account.status !== 'onboard' && <SupportAgent key={role} role={role} s={s} ids={{ creatorId, editorId }} live={live} />}
       <Toaster />
     </div>
+    </ShellCtx.Provider>
   )
 }

@@ -6,7 +6,8 @@ import { AiCard } from './Copilot.jsx'
 import OrderThread from './OrderThread.jsx'
 import { KycBanner } from './Kyc.jsx'
 import { OrderRow } from './Creator.jsx'
-import { Tabs, Pill, Empty, Sheet, Icon, toast, act, inr, ago, dueIn } from '../ui.jsx'
+import { Pill, Empty, Sheet, Icon, toast, act, inr, ago, dueIn } from '../ui.jsx'
+import { StudioFrame, OrderDeck, Tile, stageOf, orderProgress } from '../studio.jsx'
 import { editorMetrics } from '../services/metrics.js'
 import { TrendChart, Kpi, RangePicker, ChartCard, seriesTable, fmtNum, fmtPct, fmtInr, fmtInrShort } from '../charts.jsx'
 
@@ -19,36 +20,35 @@ export default function Editor({ s, editorId }) {
   const active = mine.filter((o) => ['editing', 'revision'].includes(o.status))
 
   return (
-    <div className="role-view">
-      <div className="view-head">
-        <div>
-          <p className="kicker">// editor dashboard</p>
-          <h1>Good to see you, {me.name.split(' ')[0]}</h1>
-        </div>
-        <div className="earn-chip">
-          <span className="muted small">Available</span>
-          <b>{inr(money.available)}</b>
-        </div>
-      </div>
+    <StudioFrame
+      role="editor"
+      tab={tab}
+      setTab={setTab}
+      name={me.name}
+      line={`EDITOR · ${me.ratings ? '★ ' : ''}${inr(money.available)} ready`}
+      chip={
+        <button className="st-chip" onClick={() => setTab('earn')} aria-label="Open earnings">
+          <i className="st-dot" /> {inr(money.available)}
+        </button>
+      }
+      menu={[
+        { title: 'WORK', items: [{ id: 'dash', label: 'Home' }, { id: 'jobs', label: 'New jobs', count: open.length }, { id: 'work', label: 'My work', count: active.length }] },
+        { title: 'MONEY', items: [{ id: 'earn', label: 'Earnings & payouts' }] },
+        { title: 'ACCOUNT', items: [{ id: 'profile', label: 'Profile' }] },
+      ]}
+      toolbar={{
+        left: { label: 'Earnings', icon: 'rupee', tab: 'earn' },
+        main: { label: 'Take a job', icon: 'inbox', tab: 'jobs' },
+        right: { label: 'My work', icon: 'cut', tab: 'work', count: active.length },
+      }}
+    >
       <KycBanner role="editor" person={me} compact />
-      <Tabs
-        value={tab}
-        onChange={setTab}
-        bottom
-        tabs={[
-          { id: 'dash', label: 'Dashboard', icon: 'chart' },
-          { id: 'jobs', label: 'New jobs', icon: 'inbox', count: open.length },
-          { id: 'work', label: 'My work', icon: 'cut', count: active.length },
-          { id: 'earn', label: 'Earnings', icon: 'rupee' },
-          { id: 'profile', label: 'Profile', icon: 'user' },
-        ]}
-      />
       {tab === 'dash' && <Dashboard s={s} me={me} money={money} active={active} open={open} go={setTab} />}
       {tab === 'jobs' && <Jobs s={s} me={me} open={open} />}
       {tab === 'work' && <Work s={s} mine={mine} />}
       {tab === 'earn' && <Earnings s={s} me={me} money={money} />}
       {tab === 'profile' && <Profile me={me} />}
-    </div>
+    </StudioFrame>
   )
 }
 
@@ -59,25 +59,52 @@ function Dashboard({ s, me, money, active, open, go }) {
   const jobSeries = [{ name: 'Jobs delivered', values: m.jobsDaily, color: 'var(--series-3)' }]
   const ratingSeries = [{ name: 'Rating (7-day avg)', values: m.ratingDaily, color: 'var(--series-4)' }]
   const pts = (v, p) => (v == null || p == null ? null : v - p)
+  const jobCards = active.map((o) => ({
+    key: o.id,
+    order: o,
+    kicker: o.status === 'revision' ? 'REVISION' : 'IN PROGRESS',
+    title: o.title,
+    meta: `${o.id} · ${editType(o.typeId).name} · you earn ${inr(o.editorPayInr)}`,
+    dueAt: o.dueAt,
+    progress: orderProgress(o),
+    stage: stageOf(o).label,
+    cta: 'Open job',
+    onOpen: () => go('work'),
+  }))
+  const boardCards = open.slice(0, 5).map((o) => ({
+    key: o.id,
+    order: o,
+    kicker: 'NEW ON THE BOARD',
+    title: o.title,
+    meta: `${o.id} · ${editType(o.typeId).name} · you earn ${inr(o.editorPayInr)}`,
+    dueAt: o.dueAt,
+    progress: orderProgress(o),
+    stage: 'Waiting for editor',
+    cta: 'See the job',
+    onOpen: () => go('jobs'),
+  }))
+  const cards = [...jobCards, ...boardCards]
+  if (!cards.length)
+    cards.push({
+      key: 'empty',
+      kicker: 'ALL CLEAR',
+      title: 'No jobs right now',
+      meta: 'New orders show up here the moment creators pay',
+      dueAt: null,
+      pill: 'Online',
+      progress: 0,
+      stage: 'Waiting for the next order',
+      cta: 'Open the job board',
+      onOpen: () => go('jobs'),
+    })
   return (
     <div className="stack">
-      <section className="balance-hero green">
-        <div>
-          <p className="kicker">// ready for monday</p>
-          <div className="balance-num">{inr(money.available)}</div>
-          <p className="muted small">
-            Paid {PAYOUTS.schedule.toLowerCase()} by {PAYOUTS.method} to {me.upi || 'your verified UPI'} · {inr(money.inProgress)} more in progress
-          </p>
-        </div>
-        <div className="balance-actions">
-          <button className="btn btn-green" onClick={() => go('jobs')}>
-            <Icon name="inbox" size={18} /> {open.length} new job{open.length === 1 ? '' : 's'}
-          </button>
-          <button className="btn btn-ghost" onClick={() => go('work')}>
-            <Icon name="cut" size={18} /> {active.length} in progress
-          </button>
-        </div>
-      </section>
+      <h1 className="st-hello">Hi {me.name.split(' ')[0]}</h1>
+      <OrderDeck cards={cards} hint="Swipe the card for your next job. Each one shows the time you have left." />
+      <div className="st-tiles">
+        <Tile label="READY FOR MONDAY" value={inr(money.available)} sub={`Paid ${PAYOUTS.schedule.toLowerCase()} by ${PAYOUTS.method} to ${me.upi || 'your verified UPI'}`} />
+        <Tile label="IN PROGRESS" value={inr(money.inProgress)} sub={`${active.length} job${active.length === 1 ? '' : 's'} · ${open.length} new on the board`} />
+      </div>
       <div className="dash-head">
         <h3 className="section-title">Your performance</h3>
         <RangePicker value={days} onChange={setDays} />
