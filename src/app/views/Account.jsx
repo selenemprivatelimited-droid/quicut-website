@@ -106,6 +106,11 @@ export function Onboarding({ email }) {
             </button>
           ))}
         </div>
+        {f.role === 'editor' && (
+          <p className="muted small">
+            QuiCut selects editors in five steps so creators can trust every delivery. <a href="apply/">Apply to become a verified editor</a> to get priority jobs and your full payout rate.
+          </p>
+        )}
         {f.role && (
           <div className="form-grid">
             <div className="field span-2">

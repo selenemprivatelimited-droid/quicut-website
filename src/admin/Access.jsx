@@ -6,8 +6,8 @@ import { toast } from '../app/ui.jsx'
 export const ROLES = [
   { id: 'founder', label: 'Founder', note: 'Full access', sections: null },
   { id: 'support', label: 'Support Lead', note: 'Tickets and orders', sections: ['tickets', 'orders', 'people', 'monitor'] },
-  { id: 'quality', label: 'Quality Head', note: 'Editor quality', sections: ['tickets', 'team', 'kyc', 'orders', 'monitor'] },
-  { id: 'editor_ops', label: 'Editor Ops', note: 'Editors and vetting', sections: ['team', 'kyc', 'people', 'payouts'] },
+  { id: 'quality', label: 'Quality Head', note: 'Editor quality', sections: ['tickets', 'team', 'vetting', 'kyc', 'orders', 'monitor'] },
+  { id: 'editor_ops', label: 'Editor Ops', note: 'Editors and vetting', sections: ['team', 'vetting', 'kyc', 'people', 'payouts'] },
   { id: 'finance', label: 'Finance', note: 'Payouts and refunds', sections: ['overview', 'payouts', 'orders', 'pricing'] },
   { id: 'growth', label: 'Growth', note: 'Analytics', sections: ['overview', 'analyst', 'team'] },
 ]
