@@ -8,6 +8,7 @@ import Editor from './views/Editor.jsx'
 import IntroSplash from '../intro/IntroSplash.jsx'
 import { SignInSheet, Onboarding, AccountChip } from './views/Account.jsx'
 import Help from './views/Help.jsx'
+import SupportAgent from './views/SupportAgent.jsx'
 
 // Admin is not part of the public app. It lives at /admin/ and opens only for allow-listed admin emails.
 const ROLES = [
@@ -128,6 +129,7 @@ export default function App() {
       {signIn && !live && account.status !== 'onboard' && <SignInSheet onClose={() => setSignIn(false)} />}
       {help && live && <Help onClose={() => setHelp(false)} />}
       {account.status === 'onboard' && <Onboarding email={account.email} />}
+      {ready && account.status !== 'loading' && account.status !== 'onboard' && <SupportAgent key={role} role={role} s={s} ids={{ creatorId, editorId }} live={live} />}
       <Toaster />
     </div>
   )
