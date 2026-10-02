@@ -16,6 +16,8 @@ import {
 } from './content.js'
 
 const inr = (n) => '₹' + Math.round(n).toLocaleString('en-IN')
+// Teaser: first digit only. The full price is one tap away and always shown before paying.
+const teaser = (n) => '₹' + Math.round(n).toLocaleString('en-IN').replace(/\d/g, (d, i) => (i === 0 ? d : '•'))
 
 function Nav() {
   const [solid, setSolid] = useState(false)
@@ -58,7 +60,7 @@ function Hero() {
         </h1>
         <p className="lede">
           Upload your raw footage, write the brief in Telugu, Hindi or English, and a verified editor delivers a
-          finished cut in 24 hours. Fixed prices from ₹299.
+          finished cut in 24 hours. One fixed price per video, shown before you pay.
         </p>
         <div className="hero-ctas">
           <a className="btn btn-red" href="#join">
@@ -211,7 +213,10 @@ function Pricing() {
             >
               {t.popular && <span className="tier-flag mono">Most ordered</span>}
               <h3 className="tier-name">{t.name}</h3>
-              <div className="tier-price display">{inr(t.price)}</div>
+              <div className={'tier-price display'}>
+                {t.id === tierId ? inr(t.price) : teaser(t.price)}
+                {t.id !== tierId && <small style={{ display: 'block', marginTop: '0.3rem', fontSize: '0.72rem', fontWeight: 600, letterSpacing: 0, color: 'var(--red)' }}>Tap to see price</small>}
+              </div>
               <p className="tier-for">{t.for}</p>
               <dl className="tier-spec">
                 <div>
