@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import Logo from '../Logo.jsx'
 import { useStore, resetDemo, useAccount, initAccount } from './services/store.js'
 import { MODE } from './services/payments.js'
@@ -9,6 +9,16 @@ import IntroSplash from '../intro/IntroSplash.jsx'
 import { SignInSheet, Onboarding, AccountChip } from './views/Account.jsx'
 import Help from './views/Help.jsx'
 import SupportAgent from './views/SupportAgent.jsx'
+
+const AppScene = lazy(() => import('./AppScene.jsx'))
+const hasWebGL = (() => {
+  try {
+    const c = document.createElement('canvas')
+    return !!(c.getContext('webgl2') || c.getContext('webgl'))
+  } catch {
+    return false
+  }
+})()
 
 // Admin is not part of the public app. It lives at /admin/ and opens only for allow-listed admin emails.
 const ROLES = [
@@ -52,6 +62,12 @@ export default function App() {
 
   return (
     <div className="app">
+      <div className="app-scene app-scene-fallback" aria-hidden="true" />
+      {hasWebGL && (
+        <Suspense fallback={null}>
+          <AppScene />
+        </Suspense>
+      )}
       <IntroSplash />
       <header className="topbar">
         <a href="./" className="brand" aria-label="QuiCut website">

@@ -1,19 +1,15 @@
-/* Motion + imagery. The backdrop picture (backdrop.css) was generated with Higgsfield (soft red and violet glow on charcoal).
-   It sits far behind everything and stays still. All movement stops for people who ask for reduced motion. */
-html { background: radial-gradient(60% 40% at 85% -5%, rgba(var(--acc-rgb), 0.18), transparent 70%), var(--void); background-attachment: fixed; }
+/* Motion. The app's backdrop is the website's 3D scene (AppScene.jsx): same void colour, red glow,
+   sparkles and the cut Q with orbiting film rings. All movement stops for people who ask for reduced motion. */
+html { background: #050507; }
 body, .app, .admin { background: transparent !important; }
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: center / cover no-repeat;
-  opacity: 0.85;
-  filter: none;
-  animation: none;
-}
-:root[data-theme='light'] body::before { opacity: 0.05; }
+.app-scene { position: fixed !important; inset: 0; z-index: -1; width: 100% !important; height: 100% !important; pointer-events: none; }
+.app-scene-fallback { background: radial-gradient(60% 50% at 70% 25%, rgba(237, 28, 36, 0.25), transparent 70%), #050507; }
+.app, .admin { position: relative; isolation: isolate; }
+:root[data-role='admin'] .app-scene-fallback { background: radial-gradient(60% 50% at 70% 25%, rgba(124, 77, 255, 0.25), transparent 70%), #050507; }
+:root[data-role='editor'] .app-scene-fallback { background: radial-gradient(60% 50% at 70% 25%, rgba(47, 227, 163, 0.2), transparent 70%), #050507; }
+/* light theme (admin): no 3D backdrop */
+:root[data-theme='light'] .app-scene { display: none; }
+:root[data-theme='light'] { background: var(--void); }
 
 /* content arrives with a short rise */
 @keyframes qc-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
