@@ -3,6 +3,7 @@ import Logo from '../Logo.jsx'
 import { useStore, resetDemo, useAccount, initAccount } from './services/store.js'
 import { MODE } from './services/payments.js'
 import { Toaster, toast, Icon } from './ui.jsx'
+import { rest } from './services/supa.js'
 import Creator from './views/Creator.jsx'
 import Editor from './views/Editor.jsx'
 import IntroSplash from '../intro/IntroSplash.jsx'
@@ -26,6 +27,7 @@ export default function App() {
   const account = useAccount()
   const [signIn, setSignIn] = useState(false)
   const [help, setHelp] = useState(false)
+  const [replies, setReplies] = useState(0)
   const [demoRole, setRoleState] = useState(initialRole)
   const [demoCreator, setCreatorId] = useState('c1')
   const [demoEditor, setEditorId] = useState('e1')
@@ -48,6 +50,11 @@ export default function App() {
   const ready = !live || (role === 'creator' ? s.creators : s.editors).some((p) => p.id === account.uid)
   const people = live ? null : (role === 'creator' ? s.creators : s.editors).filter((p) => !p.deleted).slice(0, 6)
   const who = role === 'creator' ? creatorId : editorId
+  // A badge on Help when the QuiCut team has answered a request and is waiting on you.
+  useEffect(() => {
+    if (!live || help) return
+    rest('tickets?select=id&status=eq.pending&limit=20').then((r) => setReplies((r || []).length)).catch(() => {})
+  }, [live, help])
   const setWho = role === 'creator' ? setCreatorId : setEditorId
 
   return (
@@ -88,7 +95,7 @@ export default function App() {
         )}
         {live && (
           <button className="btn btn-ghost btn-sm" onClick={() => setHelp(true)} aria-label="Help and support">
-            <Icon name="inbox" size={16} /> Help
+            <Icon name="inbox" size={16} /> Help{replies > 0 && <span className="fab3d-badge" style={{ position: 'static', marginLeft: 6, minWidth: 18, height: 18, fontSize: '0.65rem', display: 'inline-grid' }}>{replies}</span>}
           </button>
         )}
         {!live && account.status !== 'loading' && (
