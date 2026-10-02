@@ -5,8 +5,8 @@ import { toast } from '../app/ui.jsx'
 // Admin team: who can open the panel and which sections each role sees. Only a founder can change it.
 export const ROLES = [
   { id: 'founder', label: 'Founder', note: 'Full access', sections: null },
-  { id: 'support', label: 'Support Lead', note: 'Tickets and orders', sections: ['orders', 'people', 'monitor'] },
-  { id: 'quality', label: 'Quality Head', note: 'Editor quality', sections: ['team', 'kyc', 'orders', 'monitor'] },
+  { id: 'support', label: 'Support Lead', note: 'Tickets and orders', sections: ['tickets', 'orders', 'people', 'monitor'] },
+  { id: 'quality', label: 'Quality Head', note: 'Editor quality', sections: ['tickets', 'team', 'kyc', 'orders', 'monitor'] },
   { id: 'editor_ops', label: 'Editor Ops', note: 'Editors and vetting', sections: ['team', 'kyc', 'people', 'payouts'] },
   { id: 'finance', label: 'Finance', note: 'Payouts and refunds', sections: ['overview', 'payouts', 'orders', 'pricing'] },
   { id: 'growth', label: 'Growth', note: 'Analytics', sections: ['overview', 'analyst', 'team'] },

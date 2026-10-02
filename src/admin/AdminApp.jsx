@@ -11,6 +11,7 @@ import Gate from './Gate.jsx'
 import { Overview, Team } from './Overview.jsx'
 import Analyst from './Analyst.jsx'
 import Monitor from './Monitor.jsx'
+import Tickets from './Tickets.jsx'
 import Access, { canSee, roleLabel } from './Access.jsx'
 
 const NAV = [
@@ -18,6 +19,7 @@ const NAV = [
   { id: 'analyst', label: 'Data Analyst', icon: 'spark' },
   { id: 'team', label: 'Creators & editors', icon: 'users' },
   { id: 'monitor', label: 'Errors & speed', icon: 'pulse' },
+  { id: 'tickets', label: 'Support', icon: 'inbox' },
   { id: 'orders', label: 'Orders', icon: 'list' },
   { id: 'kyc', label: 'KYC', icon: 'shield' },
   { id: 'payouts', label: 'Payouts', icon: 'rupee' },
@@ -30,6 +32,7 @@ const TITLES = {
   analyst: ['Data Analyst', 'Ask questions about QuiCut data in plain language'],
   team: ['Creators & editors', 'Who is growing, who is delivering'],
   monitor: ['Errors & speed', 'Live crashes, failed API calls and page speed from real users'],
+  tickets: ['Support', 'Requests from creators and editors'],
   orders: ['Orders', 'Assign editors, refunds, deadlines'],
   kyc: ['KYC', 'Identity checks for creators and editors'],
   payouts: ['Payouts', 'Weekly editor payouts by UPI'],
@@ -163,6 +166,7 @@ function Shell({ who }) {
             {sec === 'analyst' && <Analyst s={s} />}
             {sec === 'team' && <Team s={s} days={days} />}
             {sec === 'monitor' && <Monitor live={who.live} />}
+            {sec === 'tickets' && <Tickets live={who.live} />}
             {sec === 'orders' && <Orders s={s} />}
             {sec === 'kyc' && <Kyc s={s} queue={kycQueue} />}
             {sec === 'payouts' && <Payouts s={s} />}
