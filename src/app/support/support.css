@@ -1,12 +1,11 @@
-/* CFO / CIO agents (admin): two separate round buttons, one window each */
-.agent-head { display: flex; align-items: center; gap: 12px; }
-.agent-art { width: 52px; height: 52px; border-radius: 16px; object-fit: cover; background: #0a0a18; border: 1px solid var(--glass-edge); }
-.agent-fab {
+/* Creator / editor support agent */
+.sup-fab {
   position: fixed;
-  right: 18px;
+  right: 16px;
+  bottom: calc(var(--tab-h, 64px) + var(--safe-b, 0px) + 16px);
   z-index: 45;
-  width: 58px;
-  height: 58px;
+  width: 60px;
+  height: 60px;
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -15,12 +14,10 @@
   transition: transform 0.2s ease;
   animation: fab3d-float 4.5s ease-in-out infinite;
 }
-.agent-fab-2 { animation-delay: -2s; }
-.agent-fab:hover { transform: translateY(-4px) scale(1.06); animation-play-state: paused; }
-.agent-fab:active { transform: translateY(0) scale(0.97); }
-.agent-fab-1 { bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
-.agent-fab-2 { bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
-.agent-fab-lbl {
+.sup-fab:hover { transform: translateY(-4px) scale(1.06); animation-play-state: paused; }
+.sup-fab.is-open { background: var(--acc); box-shadow: 0 0 24px rgba(var(--acc-rgb), 0.6); animation: none; }
+.sup-x { color: #fff; font-size: 1.1rem; }
+.sup-lbl {
   position: absolute;
   left: 50%;
   bottom: -9px;
@@ -28,18 +25,24 @@
   padding: 1px 8px;
   border-radius: 999px;
   font: 700 0.62rem var(--f-body);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   color: #fff;
   background: var(--acc);
 }
-/* window sits to the left of the buttons on wide screens */
-.agent-panel { right: 90px; bottom: 18px; height: min(560px, calc(100vh - 36px)); }
-@media (max-width: 640px) {
-  .agent-fab { right: 12px; width: 52px; height: 52px; }
-  .agent-fab-1 { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
-  .agent-fab-2 { bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
-  .agent-panel { left: 12px; right: 12px; bottom: calc(144px + env(safe-area-inset-bottom, 0px)); height: calc(100vh - 170px); }
+.sup-panel { right: 16px; bottom: calc(var(--tab-h, 64px) + var(--safe-b, 0px) + 88px); height: min(560px, calc(100vh - var(--tab-h, 64px) - 120px)); }
+@media (min-width: 761px) {
+  .sup-fab { bottom: 20px; }
+  .sup-panel { bottom: 92px; height: min(580px, calc(100vh - 120px)); }
 }
+@media (max-width: 640px) {
+  .sup-panel { left: 12px; right: 12px; width: auto; }
+}
+.sup-head { display: flex; align-items: center; gap: 12px; }
+.sup-art { width: 48px; height: 48px; border-radius: 14px; object-fit: cover; border: 1px solid var(--glass-edge); background: #0a0a12; }
+.sup-ai { margin-left: 6px; padding: 1px 6px; border-radius: 6px; font: 700 0.62rem var(--f-body); background: rgba(var(--acc-rgb), 0.2); color: var(--acc); vertical-align: middle; }
+.sup-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.sup-human { border-color: rgba(var(--acc-rgb), 0.6); }
+.sup-order { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding: 8px 10px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--hair); }
 
 /* 3D button: a raised glass sphere with a lit rim, soft contact shadow and the portrait standing out of it */
 .fab3d-ball, .sup-ball {
